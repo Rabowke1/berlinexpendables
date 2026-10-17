@@ -1,0 +1,326 @@
+{
+ "frames": {
+  "explosion_0": {
+   "frame": {
+    "x": 1,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_1": {
+   "frame": {
+    "x": 34,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_2": {
+   "frame": {
+    "x": 67,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_3": {
+   "frame": {
+    "x": 100,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_4": {
+   "frame": {
+    "x": 133,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_5": {
+   "frame": {
+    "x": 166,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_6": {
+   "frame": {
+    "x": 199,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "explosion_7": {
+   "frame": {
+    "x": 232,
+    "y": 1,
+    "w": 32,
+    "h": 32
+   }
+  },
+  "wave_0": {
+   "frame": {
+    "x": 265,
+    "y": 1,
+    "w": 8,
+    "h": 10
+   }
+  },
+  "wave_1": {
+   "frame": {
+    "x": 274,
+    "y": 1,
+    "w": 8,
+    "h": 10
+   }
+  },
+  "flame_0": {
+   "frame": {
+    "x": 283,
+    "y": 1,
+    "w": 10,
+    "h": 10
+   }
+  },
+  "flame_1": {
+   "frame": {
+    "x": 294,
+    "y": 1,
+    "w": 10,
+    "h": 10
+   }
+  },
+  "flame_2": {
+   "frame": {
+    "x": 305,
+    "y": 1,
+    "w": 10,
+    "h": 10
+   }
+  },
+  "flame_3": {
+   "frame": {
+    "x": 316,
+    "y": 1,
+    "w": 10,
+    "h": 10
+   }
+  },
+  "muzzle_0": {
+   "frame": {
+    "x": 327,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "muzzle_1": {
+   "frame": {
+    "x": 336,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "muzzle_2": {
+   "frame": {
+    "x": 345,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "bottle_0": {
+   "frame": {
+    "x": 354,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "bottle_1": {
+   "frame": {
+    "x": 363,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "bottle_2": {
+   "frame": {
+    "x": 372,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "bottle_3": {
+   "frame": {
+    "x": 381,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "grenade": {
+   "frame": {
+    "x": 390,
+    "y": 1,
+    "w": 7,
+    "h": 8
+   }
+  },
+  "smoke_0": {
+   "frame": {
+    "x": 398,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "smoke_1": {
+   "frame": {
+    "x": 407,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "smoke_2": {
+   "frame": {
+    "x": 416,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "smoke_3": {
+   "frame": {
+    "x": 425,
+    "y": 1,
+    "w": 8,
+    "h": 8
+   }
+  },
+  "alert": {
+   "frame": {
+    "x": 434,
+    "y": 1,
+    "w": 3,
+    "h": 7
+   }
+  },
+  "marker": {
+   "frame": {
+    "x": 438,
+    "y": 1,
+    "w": 7,
+    "h": 5
+   }
+  },
+  "rocket": {
+   "frame": {
+    "x": 446,
+    "y": 1,
+    "w": 9,
+    "h": 4
+   }
+  },
+  "mookbullet": {
+   "frame": {
+    "x": 456,
+    "y": 1,
+    "w": 3,
+    "h": 3
+   }
+  },
+  "heavybullet": {
+   "frame": {
+    "x": 460,
+    "y": 1,
+    "w": 6,
+    "h": 3
+   }
+  },
+  "laserbeam": {
+   "frame": {
+    "x": 467,
+    "y": 1,
+    "w": 8,
+    "h": 3
+   }
+  },
+  "pellet": {
+   "frame": {
+    "x": 476,
+    "y": 1,
+    "w": 3,
+    "h": 2
+   }
+  },
+  "smgbullet": {
+   "frame": {
+    "x": 480,
+    "y": 1,
+    "w": 5,
+    "h": 2
+   }
+  }
+ },
+ "animations": {
+  "explosion": [
+   "explosion_0",
+   "explosion_1",
+   "explosion_2",
+   "explosion_3",
+   "explosion_4",
+   "explosion_5",
+   "explosion_6",
+   "explosion_7"
+  ],
+  "muzzle": [
+   "muzzle_0",
+   "muzzle_1",
+   "muzzle_2"
+  ],
+  "wave": [
+   "wave_0",
+   "wave_1"
+  ],
+  "bottle": [
+   "bottle_0",
+   "bottle_1",
+   "bottle_2",
+   "bottle_3"
+  ],
+  "flame": [
+   "flame_0",
+   "flame_1",
+   "flame_2",
+   "flame_3"
+  ],
+  "smoke": [
+   "smoke_0",
+   "smoke_1",
+   "smoke_2",
+   "smoke_3"
+  ]
+ },
+ "meta": {
+  "app": "berlin-expendables-spritegen",
+  "version": "1",
+  "image": "fx.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 486,
+   "h": 34
+  },
+  "scale": "1"
+ }
+}
