@@ -138,8 +138,8 @@ void ABEBro::MeleeHit()
 	for (ABECage* C : TArray<TObjectPtr<ABECage>>(S->Cages)) if (IsValid(C) && !C->bDead && Hit.Overlaps(C->Box)) C->Hurt(3.f, Slot);
 	// Graben
 	const float TS = W->GetTileSize();
-	const int32 TX = FMath::FloorToInt((Facing > 0 ? Box.Pos.X + Box.Size.X + 10.f : Box.Pos.X - 10.f) / TS);
-	const int32 TY = FMath::FloorToInt((Box.Pos.Y + Box.Size.Y * 0.5f) / TS);
+	const int32 TX = FMath::FloorToInt32((Facing > 0 ? Box.Pos.X + Box.Size.X + 10.f : Box.Pos.X - 10.f) / TS);
+	const int32 TY = FMath::FloorToInt32((Box.Pos.Y + Box.Size.Y * 0.5f) / TS);
 	if (W->IsSolidTile(W->GetTile(TX, TY))) { W->DamageTile(TX, TY, 2.5f); UBECombatLibrary::Sparks(this, W->TileCenter(TX, TY), 3); bAny = true; }
 	if (bAny && S->Camera) S->Camera->Shake(0.15f);
 }
@@ -212,7 +212,7 @@ void ABEBro::SimStep(float Dt)
 	if (AX != 0.f) { Facing = AX > 0.f ? 1 : -1; Vel.X += AX * (bOnGround ? S->GroundAcceleration : S->AirAcceleration) * Dt; }
 	else if (bOnGround) { Vel.X *= FMath::Pow(0.68f, Dt * 60.f); if (FMath::Abs(Vel.X) < 6.f) Vel.X = 0.f; }
 	else Vel.X *= FMath::Pow(0.97f, Dt * 60.f);
-	if (FMath::Abs(Vel.X) > MaxSpeed) Vel.X = FMath::Sign(Vel.X) * FMath::Max(MaxSpeed, FMath::Abs(Vel.X) * FMath::Pow(0.9f, Dt * 60.f));
+	if (FMath::Abs(Vel.X) > MaxSpeed) Vel.X = FMath::Sign(Vel.X) * FMath::Max<double>(MaxSpeed, FMath::Abs(Vel.X) * FMath::Pow(0.9f, Dt * 60.f));
 
 	// Springen: Coyote-Zeit, Eingabepuffer, variable Höhe, Fallen durch Plattformen
 	Coyote = bOnGround ? S->CoyoteTime : Coyote - Dt;
@@ -225,7 +225,7 @@ void ABEBro::SimStep(float Dt)
 	}
 	if (!Input.bJump && Vel.Y < -S->JumpCutVelocity) Vel.Y = -S->JumpCutVelocity;
 	if (Box.DropThrough > 0.f) Box.DropThrough -= Dt;
-	Vel.Y = FMath::Min(S->MaxFallSpeed, Vel.Y + S->Gravity * Dt);
+	Vel.Y = FMath::Min<double>(S->MaxFallSpeed, Vel.Y + S->Gravity * Dt);
 
 	// Bewegung
 	const bool bWasGround = bOnGround;

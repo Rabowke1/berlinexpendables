@@ -8,6 +8,7 @@
 #include "BEData.h"
 #include "BECombatLibrary.h"
 #include "NiagaraSystem.h"
+#include "UObject/ObjectKey.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperSpriteComponent.h"
 #include "PaperFlipbook.h"
@@ -48,12 +49,12 @@ void ABEProjectile::Tick(float DeltaSeconds)
 	if (!S || !W) { Destroy(); return; }
 
 	Vel.Y += Profile.Gravity * Dt;
-	const int32 Steps = FMath::Max(1, FMath::CeilToInt(FMath::Max(FMath::Abs(Vel.X), FMath::Abs(Vel.Y)) * Dt / 8.f));
+	const int32 Steps = FMath::Max(1, FMath::CeilToInt32(FMath::Max(FMath::Abs(Vel.X), FMath::Abs(Vel.Y)) * Dt / 8.f));
 	const FVector2D StepV = Vel * Dt / Steps;
 	for (int32 i = 0; i < Steps; ++i)
 	{
 		Pos += StepV;
-		const int32 TX = FMath::FloorToInt(Pos.X / W->GetTileSize()), TY = FMath::FloorToInt(Pos.Y / W->GetTileSize());
+		const int32 TX = FMath::FloorToInt32(Pos.X / W->GetTileSize()), TY = FMath::FloorToInt32(Pos.Y / W->GetTileSize());
 		if (W->IsSolidTile(W->GetTile(TX, TY)))
 		{
 			if (Profile.TileDamage > 0.f) W->DamageTile(TX, TY, Profile.TileDamage);
@@ -64,21 +65,21 @@ void ABEProjectile::Tick(float DeltaSeconds)
 		{
 			for (ABEMook* M : TArray<TObjectPtr<ABEMook>>(S->Mooks))
 			{
-				if (!IsValid(M) || M->bDead || Hit.Contains(M) || !M->Box.Contains(Pos, 4.f)) continue;
-				Hit.Add(M);
+				if (!IsValid(M) || M->bDead || Hit.Contains(FObjectKey(M)) || !M->Box.Contains(Pos, 4.f)) continue;
+				Hit.Add(FObjectKey(M));
 				S->HurtMook(M, Profile.Damage, Slot, EBEHitKind::Shot);
 				if (Pierce-- <= 0) { Impact(); return; }
 			}
 			for (ABEBarrel* B : S->Barrels)
 			{
-				if (!IsValid(B) || B->bDead || Hit.Contains(B) || !B->Box.Contains(Pos)) continue;
-				Hit.Add(B); B->Ignite(0.03f);
+				if (!IsValid(B) || B->bDead || Hit.Contains(FObjectKey(B)) || !B->Box.Contains(Pos)) continue;
+				Hit.Add(FObjectKey(B)); B->Ignite(0.03f);
 				if (Pierce-- <= 0) { Impact(); return; }
 			}
 			for (ABECage* C : TArray<TObjectPtr<ABECage>>(S->Cages))
 			{
-				if (!IsValid(C) || C->bDead || Hit.Contains(C) || !C->Box.Contains(Pos)) continue;
-				Hit.Add(C); C->Hurt(Profile.Damage, Slot);
+				if (!IsValid(C) || C->bDead || Hit.Contains(FObjectKey(C)) || !C->Box.Contains(Pos)) continue;
+				Hit.Add(FObjectKey(C)); C->Hurt(Profile.Damage, Slot);
 				if (Pierce-- <= 0) { Impact(); return; }
 			}
 		}
@@ -135,7 +136,7 @@ void ABEGrenade::Tick(float DeltaSeconds)
 	ABETileWorld* W = S ? S->TileWorld.Get() : nullptr;
 	if (!S || !W) { Destroy(); return; }
 
-	Vel.Y = FMath::Min(720.f, Vel.Y + 1800.f * Dt);
+	Vel.Y = FMath::Min<double>(720.0, Vel.Y + 1800.f * Dt);
 	if (W->MoveX(Box, Vel.X * Dt)) Vel.X *= -0.5f;
 	if (W->MoveY(Box, Vel.Y * Dt))
 	{

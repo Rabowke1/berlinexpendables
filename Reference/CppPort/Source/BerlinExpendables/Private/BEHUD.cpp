@@ -56,7 +56,7 @@ void ABEHUD::DrawHUD()
 		FString Name = B->Data ? B->Data->DisplayName.ToString() : TEXT("?");
 		int32 SpaceIdx; if (Name.FindLastChar(TEXT(' '), SpaceIdx)) Name = Name.Mid(SpaceIdx + 1);
 		Text(Name, X + 78.f * Scale, Y + 4.f * Scale, FLinearColor(0.85f, 0.84f, 0.9f));
-		if (!B->bAlive) Text(GS->Lives > 0 ? FString::Printf(TEXT("RESPAWN %d"), FMath::CeilToInt(B->DeadTimer)) : TEXT("TOT"), X + 46.f * Scale, Y + 24.f * Scale, FLinearColor(0.62f, 0.61f, 0.69f));
+		if (!B->bAlive) Text(GS->Lives > 0 ? FString::Printf(TEXT("RESPAWN %d"), FMath::CeilToInt32(B->DeadTimer)) : TEXT("TOT"), X + 46.f * Scale, Y + 24.f * Scale, FLinearColor(0.62f, 0.61f, 0.69f));
 		else
 		{
 			Text(FString::Printf(TEXT("GRANATEN %d"), B->Grenades), X + 46.f * Scale, Y + 24.f * Scale, FLinearColor(0.85f, 0.84f, 0.9f));

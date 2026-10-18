@@ -12,6 +12,11 @@
 ABEGameState::ABEGameState()
 {
 	PrimaryActorTick.bCanEverTick = true;
+}
+
+void ABEGameState::BeginPlay()
+{
+	Super::BeginPlay();
 	Lives = UBEGameSettings::Get()->StartLives;
 }
 
@@ -30,7 +35,7 @@ void ABEGameState::AddPopup(const FString& Text, FVector2D At, FLinearColor Colo
 void ABEGameState::Freeze(float Seconds)
 {
 	UWorld* W = GetWorld(); if (!W) return;
-	FreezeUntilRealTime = FMath::Max(FreezeUntilRealTime, W->GetRealTimeSeconds() + Seconds);
+	FreezeUntilRealTime = FMath::Max<double>(FreezeUntilRealTime, static_cast<double>(W->GetRealTimeSeconds()) + Seconds);
 	if (!bFrozen) { bFrozen = true; UGameplayStatics::SetGlobalTimeDilation(this, 0.05f); }
 }
 
@@ -38,7 +43,7 @@ void ABEGameState::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UWorld* W = GetWorld(); if (!W) return;
-	if (bFrozen && W->GetRealTimeSeconds() >= FreezeUntilRealTime) { bFrozen = false; UGameplayStatics::SetGlobalTimeDilation(this, 1.f); }
+	if (bFrozen && static_cast<double>(W->GetRealTimeSeconds()) >= FreezeUntilRealTime) { bFrozen = false; UGameplayStatics::SetGlobalTimeDilation(this, 1.f); }
 
 	MatchTime += DeltaSeconds;
 	if (MatchState != EBEMatchState::Playing) StateTime += DeltaSeconds;
@@ -220,7 +225,7 @@ UBECharacterData* ABEGameState::PickCharacter(const ABEBro* For, bool bRandom) c
 	TSet<UBECharacterData*> Used;
 	for (ABEBro* B : Bros) if (IsValid(B) && B != For && B->bAlive && B->Data) Used.Add(B->Data);
 	int32 Start = 0;
-	if (For && For->Data) Start = All.IndexOfByKey(For->Data);
+	if (For && For->Data) Start = All.IndexOfByKey(For->Data.Get());
 	if (Start < 0) Start = 0;
 	int32 Idx = bRandom ? (Start + 1 + FMath::RandRange(0, FMath::Max(0, All.Num() - 2))) % All.Num() : (For ? (Start + 1) % All.Num() : Bros.Num() % All.Num());
 	for (int32 i = 0; i < All.Num() && (Used.Contains(All[Idx]) || (For && For->Data == All[Idx] && All.Num() > 1)); ++i) Idx = (Idx + 1) % All.Num();

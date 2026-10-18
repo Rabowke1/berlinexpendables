@@ -62,8 +62,9 @@ public:
 	void CleanupLists();
 
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void BeginPlay() override;
 
 private:
-	float FreezeUntilRealTime = 0.f;
+	double FreezeUntilRealTime = 0.0;
 	bool bFrozen = false;
 };

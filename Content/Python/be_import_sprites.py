@@ -1,6 +1,8 @@
 """Importiert die Sprite-Atlanten (PNG + JSON) nach /Game/BE: Texturen, PaperSprites mit Pivots & Sockets,
-Flipbooks, Charakter-DataAssets, Waffen-/Sprite-Bibliothek, Tileset. Quelle: Content/Import/Placeholder
-(oder BE_IMPORT_DIR, z. B. ein AutoSprite-Export nach dem Pixelize-Schritt)."""
+Flipbooks und – sobald die Daten-Blueprints BP_CharacterData, BP_SpriteLibrary, BP_WeaponLibrary, BP_TileSet
+existieren (docs/BLUEPRINTS.md) – die DataAsset-Instanzen. Quelle: Content/Import/Placeholder
+(oder BE_IMPORT_DIR, z. B. ein AutoSprite-Export nach dem Pixelize-Schritt).
+Ohne die Blueprint-Klassen werden nur Sprites/Flipbooks erzeugt (Namensschema FB_<id>_<anim>_<aim>)."""
 import unreal
 from be_common import *  # noqa: F401,F403
 
@@ -57,52 +59,30 @@ def import_characters(sprite_material, fx_flipbooks):
             base = anim.split("_")[0]
             flipbooks[anim] = make_flipbook(f"FB_{cid}_{anim}", [sprites[n] for n in names], FPS.get(base, 10))
 
-        da = make_data_asset(f"DA_Char_{cid}", unreal.BECharacterData)
-        da.set_editor_property("id", cid)
-        da.set_editor_property("display_name", unreal.Text(spec["name"]))
-        da.set_editor_property("tagline", unreal.Text(spec["tagline"]))
-        da.set_editor_property("accent", hex_to_linear(meta.get("accent", "#ffffff")))
-        da.set_editor_property("skin", hex_to_linear(meta.get("skin", "#f1c27d")))
-        da.set_editor_property("player", spec["player"])
-        da.set_editor_property("flipbooks", {unreal.Name(k): v for k, v in flipbooks.items()})
-        da.set_editor_property("portrait", portrait_tex)
-        da.set_editor_property("gibs", [sprites[n] for n in ("gib_head", "gib_torso", "gib_leg") if n in sprites])
+        cls = bp_class("BP_CharacterData")
+        if cls is None:
+            warn(f"BP_CharacterData fehlt – {cid}: nur Sprites/Flipbooks erzeugt.")
+            result[cid] = None
+            log(f"Charakter {cid}: {len(sprites)} Sprites, {len(flipbooks)} Flipbooks")
+            continue
+        da = make_data_asset(f"DA_Char_{cid}", cls)
         box, cbox = meta["box"], meta["crouchBox"]
-        da.set_editor_property("body_size", unreal.Vector2D(box["w"], box["h"]))
-        da.set_editor_property("crouch_size", unreal.Vector2D(cbox["w"], cbox["h"]))
-        da.set_editor_property("grenades", 3)
-        da.set_editor_property("grenade_radius", spec.get("grenade_radius", 60.0))
-        # Waffe
         w, b = spec["w"], spec["b"]
-        bullet = unreal.BEBulletProfile()
-        bullet.set_editor_property("flipbook", fx_flipbooks.get(b["sprite"]))
-        bullet.set_editor_property("speed", b["speed"])
-        bullet.set_editor_property("life_time", b["life"])
-        bullet.set_editor_property("damage", float(b.get("dmg", 1.0)))
-        bullet.set_editor_property("tile_damage", float(b.get("tile", 1.0)))
-        bullet.set_editor_property("pierce", int(b.get("pierce", 0)))
-        bullet.set_editor_property("gravity", float(b.get("gravity", 0.0)))
-        bullet.set_editor_property("lob", float(b.get("lob", 0.0)))
-        bullet.set_editor_property("explode_radius", float(b.get("explode", 0.0)))
-        bullet.set_editor_property("spin", bool(b.get("spin", False)))
-        weapon = unreal.BEWeaponProfile()
-        weapon.set_editor_property("weapon_id", spec["weapon"])
-        weapon.set_editor_property("cooldown", w["cooldown"])
-        weapon.set_editor_property("count", w["count"])
-        weapon.set_editor_property("spread", w["spread"])
-        weapon.set_editor_property("recoil", w["recoil"])
-        weapon.set_editor_property("shake", w["shake"])
-        weapon.set_editor_property("bullet", bullet)
-        da.set_editor_property("weapon", weapon)
-        # Gegnerwerte
-        da.set_editor_property("hp", int(spec.get("hp", 1)))
-        da.set_editor_property("burst", int(spec.get("burst", 1)))
-        da.set_editor_property("burst_gap", float(spec.get("gap", 0.12)))
         cd = spec.get("cd", (1.0, 1.8))
-        da.set_editor_property("cooldown_range", unreal.Vector2D(cd[0], cd[1]))
-        da.set_editor_property("sight_range", float(spec.get("sight", 300.0)))
-        da.set_editor_property("walk_speed", float(spec.get("walk", 60.0)))
-        da.set_editor_property("score", int(spec.get("score", 100)))
+        set_props(da,
+            Id=cid, DisplayName=unreal.Text(spec["name"]), Tagline=unreal.Text(spec["tagline"]),
+            Accent=hex_to_linear(meta.get("accent", "#ffffff")), Skin=hex_to_linear(meta.get("skin", "#f1c27d")),
+            IsPlayer=spec["player"], Flipbooks={unreal.Name(k): v for k, v in flipbooks.items()}, Portrait=portrait_tex,
+            Gibs=[sprites[n] for n in ("gib_head", "gib_torso", "gib_leg") if n in sprites],
+            BodySize=unreal.Vector2D(box["w"], box["h"]), CrouchSize=unreal.Vector2D(cbox["w"], cbox["h"]),
+            WeaponId=spec["weapon"], Cooldown=w["cooldown"], Count=w["count"], Spread=w["spread"], Recoil=w["recoil"], Shake=w["shake"],
+            BulletFlipbook=fx_flipbooks.get(b["sprite"]), BulletSpeed=b["speed"], BulletLife=b["life"],
+            BulletDamage=float(b.get("dmg", 1.0)), BulletTileDamage=float(b.get("tile", 1.0)), BulletPierce=int(b.get("pierce", 0)),
+            BulletGravity=float(b.get("gravity", 0.0)), BulletLob=float(b.get("lob", 0.0)), BulletExplode=float(b.get("explode", 0.0)),
+            BulletSpin=bool(b.get("spin", False)), Grenades=3, GrenadeRadius=spec.get("grenade_radius", 60.0),
+            Hp=int(spec.get("hp", 1)), Burst=int(spec.get("burst", 1)), BurstGap=float(spec.get("gap", 0.12)),
+            CooldownMin=float(cd[0]), CooldownMax=float(cd[1]), SightRange=float(spec.get("sight", 300.0)),
+            WalkSpeed=float(spec.get("walk", 60.0)), Score=int(spec.get("score", 100)))
         result[cid] = da
         log(f"Charakter {cid}: {len(sprites)} Sprites, {len(flipbooks)} Flipbooks")
     return result
@@ -111,19 +91,23 @@ def import_characters(sprite_material, fx_flipbooks):
 def import_weapons(sprite_material):
     atlas = read_json("weapons.json")
     tex = import_texture("weapons.png", "T_weapons")
-    lib = make_data_asset("DA_WeaponLibrary", unreal.BEWeaponLibrary)
     sprites = {}
     for fname, fdef in atlas["frames"].items():
         grip, tip = fdef["grip"], fdef["tip"]
         sprites[fname] = make_sprite(f"S_weapon_{fname}", tex, fdef["frame"], (grip[0], grip[1]), {"Muzzle": (tip[0], tip[1])}, sprite_material)
-    lib.set_editor_property("sprites", {unreal.Name(k): v for k, v in sprites.items()})
+    cls = bp_class("BP_WeaponLibrary")
+    lib = None
+    if cls is None:
+        warn("BP_WeaponLibrary fehlt – Waffensprites erzeugt, kein DataAsset.")
+    else:
+        lib = make_data_asset("DA_WeaponLibrary", cls)
+        set_props(lib, Sprites={unreal.Name(k): v for k, v in sprites.items()})
     log(f"Waffen: {len(sprites)} Sprites")
     return lib
 
 
 def import_fx_and_props(sprite_material):
     """FX-Atlas (Projektile, Explosion ...) + Tiles-Atlas (Props/Items) + Hintergründe -> SpriteLibrary."""
-    lib = make_data_asset("DA_SpriteLibrary", unreal.BESpriteLibrary)
     sprites, flipbooks = {}, {}
     fx = read_json("fx.json")
     fx_tex = import_texture("fx.png", "T_fx")
@@ -152,24 +136,30 @@ def import_fx_and_props(sprite_material):
         w, h = tex.blueprint_get_size_x(), tex.blueprint_get_size_y()
         sprites[bg] = make_sprite(f"S_{bg}", tex, {"x": 0, "y": 0, "w": w, "h": h}, (w / 2.0, h / 2.0), None, sprite_material)
 
-    lib.set_editor_property("sprites", {unreal.Name(k): v for k, v in sprites.items()})
-    lib.set_editor_property("flipbooks", {unreal.Name(k): v for k, v in flipbooks.items()})
+    cls = bp_class("BP_SpriteLibrary")
+    lib = None
+    if cls is None:
+        warn("BP_SpriteLibrary fehlt – Sprites/Flipbooks erzeugt, kein DataAsset.")
+    else:
+        lib = make_data_asset("DA_SpriteLibrary", cls)
+        set_props(lib, Sprites={unreal.Name(k): v for k, v in sprites.items()}, Flipbooks={unreal.Name(k): v for k, v in flipbooks.items()})
     log(f"SpriteLibrary: {len(sprites)} Sprites, {len(flipbooks)} Flipbooks")
     return lib, flipbooks, tiles_tex, tiles
 
 
 def import_tileset(tiles_tex, tiles_atlas):
-    ts = make_data_asset("DA_TileSet", unreal.BETileSet)
-    ts.set_editor_property("atlas", tiles_tex)
+    cls = bp_class("BP_TileSet")
+    if cls is None:
+        warn("BP_TileSet fehlt – Tile-Atlas importiert, kein DataAsset.")
+        return None
+    ts = make_data_asset("DA_TileSet", cls)
     size = tiles_atlas["meta"]["size"]
     rects = {}
     for fname, fdef in tiles_atlas["frames"].items():
         fr = fdef["frame"]
-        r = unreal.BETileRect()
-        r.set_editor_property("uv0", unreal.Vector2D(fr["x"] / size["w"], fr["y"] / size["h"]))
-        r.set_editor_property("uv1", unreal.Vector2D((fr["x"] + fr["w"]) / size["w"], (fr["y"] + fr["h"]) / size["h"]))
-        rects[unreal.Name(fname)] = r
-    ts.set_editor_property("rects", rects)
+        # (u0, v0, u1, v1) normalisiert
+        rects[unreal.Name(fname)] = unreal.Vector4(fr["x"] / size["w"], fr["y"] / size["h"], (fr["x"] + fr["w"]) / size["w"], (fr["y"] + fr["h"]) / size["h"])
+    set_props(ts, Atlas=tiles_tex, Rects=rects)
     log(f"TileSet: {len(rects)} Rechtecke")
     return ts
 

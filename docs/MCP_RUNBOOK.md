@@ -18,7 +18,7 @@ Umgekehrt (Cloud-App steuert deinen PC): `claude remote-control` im Projektordne
 
 ## 2. Unreal-MCP verbinden
 
-1. `BerlinExpendables.uproject` in UE 5.8 öffnen. Beim ersten Start fragt der Editor, ob das C++-Modul kompiliert werden soll: **Ja**. (Der Code wurde ohne Compiler geschrieben; Fehler werden in dieser ersten Runde per Live Coding behoben.)
+1. `BerlinExpendables.uproject` in UE 5.8 öffnen. Es ist ein reines Blueprint-Projekt: **kein Kompilieren, kein Visual Studio nötig.** (Erscheint trotzdem ein „Missing Modules“-Dialog, liegt noch ein alter `Source/`-Ordner, `Binaries/` oder `Intermediate/` aus einem früheren Stand im Projektordner – diese Ordner löschen; der C++-Port liegt jetzt bewusst unter `Reference/CppPort`.)
 2. Die Plugins `ModelContextProtocol` und `AllToolsets` sind in der `.uproject` bereits aktiviert. Falls der Editor sie nicht findet, stammen sie aus dem Engine-Ordner `Engine/Plugins/Experimental/ModelContextProtocol` deiner Installation.
 3. MCP-Server starten: Editor-Konsole (`~`) → `ModelContextProtocol.StartServer`. Für Autostart in `Saved/Config/<Platform>Editor/EditorPerProjectUserSettings.ini`:
    ```ini
@@ -46,22 +46,18 @@ claude mcp add --scope project --transport stdio --env COMFYUI_URL=http://127.0.
 
 ## 4. Erste Editor-Session (Reihenfolge)
 
-Jeder Punkt ist eine Anweisung an die lokale Claude-Session; die Toolsets werden mit `list_toolsets` / `describe_toolset` entdeckt und per `call_tool` aufgerufen.
+Jeder Punkt ist eine Anweisung an die lokale Claude-Session; die Toolsets werden mit `list_toolsets` / `describe_toolset` entdeckt und per `call_tool` aufgerufen. Der komplette Bauplan steht in `docs/BLUEPRINTS.md`.
 
-1. **Kompilieren**: `LiveCodingToolset.CompileLiveCoding` (oder der Editor-Dialog beim Öffnen). Fehler lesen, beheben, erneut kompilieren, bis grün.
-2. **Assets bauen**: Python-Toolset → `py be_build_all.py` ausführen (oder Editor-Menü *Tools → Execute Python Script*). Erzeugt unter `/Game/BE` Texturen (Nearest, keine Mips), Sprites mit Pivots und Hand-/Muzzle-Sockets, Flipbooks, Charakter-DataAssets, Waffen- und Sprite-Bibliothek, Tileset, Materialien, das Level-Asset und die Map `/Game/Maps/L_Kreuzberg01`; trägt alles in `Config/DefaultGame.ini` ein.
-3. **Projekteinstellungen prüfen**: *Project Settings → Game → Berlin Expendables – Gameplay*: StartLevel, PlayerCharacters (4), MookData, SecurityData, CaptiveData, Libraries, TileSet, TileMaterial gesetzt.
-4. **PIE**: Map öffnen, Play. Erwartung: Himmel/Skyline/Häuser-Parallax, Tile-Welt, Titel-Overlay. `K` (Tastatur 1) oder `.` (Tastatur 2) oder Gamepad-A → Bro erscheint mit Banner. Schießen `J`, Granate `L`. Explosionen reißen Krater, Trümmerwürfel fliegen, Lichtblitze.
-   - Tiles spiegelverkehrt? → Settings `bFlipTileU/bFlipTileV` umschalten.
-   - Waffe sitzt daneben? → Hand-Socket-Offset in `be_import_sprites.py` (Pivot/Socket) prüfen.
-5. **Niagara (3D-VFX)**: mit dem Niagara-Toolset Systeme anlegen und in den Settings (*VFX*) eintragen:
-   - `NS_Explosion`: Sprite-Renderer mit `FB_fx_explosion`-Textur, GPU-Funken (Mesh-Renderer Würfel), Rauchring, Light-Renderer (orange, 0,3 s), User-Parameter `Tint` (LinearColor).
-   - `NS_Debris`: Mesh-Partikel mit Kollision gegen Szene aus, Lebenszeit 1–2 s, `Tint`.
-   - `NS_Blood`, `NS_Sparks`, `NS_Dust`, `NS_Smoke`: Sprite-Partikel, kleine Mengen, Pixel-Look (Nearest-Texturen).
-   Alle Fallbacks (3D-Würfel, Punktlicht) bleiben aktiv, bis die Systeme eingetragen sind.
-6. **AutoSprite**: ersten Bro bestellen (siehe `docs/PROMPTS_AUTOSPRITE.md`), Export nach `Content/Import/AutoSprite/<id>/`, `pixelize.py --grid 64 --outline --normals`, dann `BE_IMPORT_DIR` auf diesen Ordner setzen und `be_import_sprites.py` erneut laufen lassen.
-7. **ComfyUI**: Welt-1-Ebenen mit `Tools/comfyui/workflows/parallax_layer.json` rendern, `pixelize.py --width 960 --dither --tile-check`, als Sprites importieren und den `ABEParallaxLayer`-Aktoren in der Map zuweisen.
-8. **Commit**: `Content/**/*.uasset` und `*.umap` laufen über Git LFS (`.gitattributes`). Vor großen MCP-Änderungen und danach speichern (Strg+Shift+S).
+1. **Assets importieren (Teil 1):** Python-Toolset → `py be_build_all.py` (oder *Tools → Execute Python Script*). Erzeugt unter `/Game/BE` Texturen (Nearest, keine Mips), Sprites mit Pivots und Hand-/Muzzle-Sockets, Flipbooks, Materialien (`M_TileAtlas`, `M_SpriteLit`, `M_Debris`) sowie die Map `/Game/Maps/L_Kreuzberg01` mit Licht. Warnungen „BP_… fehlt“ sind in diesem Durchlauf normal.
+2. **Enums, Structs, Daten-Blueprints** anlegen (`BLUEPRINTS.md` Abschnitt 1 + 2; Variablennamen exakt), dann `py be_build_all.py` **erneut** → `/Game/BE/Data` enthält `DA_Char_*`, `DA_SpriteLibrary`, `DA_WeaponLibrary`, `DA_TileSet`, `DA_Level_Kreuzberg01`.
+3. **Blueprints bauen** in der Reihenfolge aus `BLUEPRINTS.md` Abschnitt 14, nach jedem Schritt kompilieren, speichern, PIE. Project Settings → Maps & Modes: GameMode = `BP_GameMode`, Game Instance = `BP_GameInstance`, Startmap = `L_Kreuzberg01`.
+4. **PIE-Erwartung nach Schritt 7:** Himmel/Skyline/Häuser-Parallax, Tile-Welt, Titel-Overlay. `K` (Tastatur 1), `.` (Tastatur 2) oder Gamepad-A → Bro erscheint. Schießen `J`, Granate `L`. Explosionen reißen Krater, Trümmerwürfel fliegen, Lichtblitze.
+   - Tiles spiegelverkehrt? → `BP_TileWorld.FlipU/FlipV` umschalten.
+   - Waffe sitzt daneben? → Hand-Socket/Pivot in `be_import_sprites.py` prüfen.
+5. **Niagara (3D-VFX)** mit dem Niagara-Toolset: `NS_Explosion` (Sprite-Sheet `T_fx`, GPU-Funken, Rauchring, Light-Renderer, User-Param `Tint`), `NS_Debris`, `NS_Blood`, `NS_Sparks`, `NS_Dust`, `NS_Smoke`; in `BPL_Combat` referenzieren. Fallbacks (`BP_Debris`, `BP_Flash`) bleiben aktiv.
+6. **AutoSprite:** ersten Bro bestellen (`docs/PROMPTS_AUTOSPRITE.md`), Export nach `Content/Import/AutoSprite/<id>/`, `pixelize.py --grid 64 --outline --normals`, `BE_IMPORT_DIR` auf den Ordner setzen, `be_import_sprites.py` erneut.
+7. **ComfyUI:** Welt-1-Ebenen mit `Tools/comfyui/workflows/parallax_layer.json`, `pixelize.py --width 960 --dither --tile-check`, als Sprites importieren, `BP_ParallaxLayer`-Aktoren zuweisen.
+8. **Commit:** `Content/**/*.uasset` und `*.umap` laufen über Git LFS. Vor großen MCP-Änderungen und danach speichern (Strg+Shift+S).
 
 ## 5. Sicherheitsregeln bei MCP-Änderungen
 

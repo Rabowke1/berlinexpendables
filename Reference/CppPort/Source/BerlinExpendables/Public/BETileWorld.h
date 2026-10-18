@@ -41,7 +41,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "BE") float GetTileSize() const { return TileSize; }
 	UFUNCTION(BlueprintPure, Category = "BE") EBETile GetTile(int32 TX, int32 TY) const;
 	UFUNCTION(BlueprintPure, Category = "BE") bool IsSolidTile(EBETile T) const { return T != EBETile::Air && T != EBETile::Platform; }
-	UFUNCTION(BlueprintPure, Category = "BE") bool IsSolidAt(FVector2D P) const { return IsSolidTile(GetTile(FMath::FloorToInt(P.X / TileSize), FMath::FloorToInt(P.Y / TileSize))); }
+	UFUNCTION(BlueprintPure, Category = "BE") bool IsSolidAt(FVector2D P) const { return IsSolidTile(GetTile(FMath::FloorToInt32(P.X / TileSize), FMath::FloorToInt32(P.Y / TileSize))); }
 	UFUNCTION(BlueprintPure, Category = "BE") FVector2D TileCenter(int32 TX, int32 TY) const { return FVector2D((TX + 0.5f) * TileSize, (TY + 0.5f) * TileSize); }
 	UFUNCTION(BlueprintPure, Category = "BE") FVector2D SpawnPoint() const { return FVector2D(SpawnTile.X * TileSize, SpawnTile.Y * TileSize); }
 	const TArray<FBEEntitySpawn>& GetSpawns() const { return Spawns; }

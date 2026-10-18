@@ -25,3 +25,7 @@ Plugins/*/Intermediate/
 *.xcodeproj
 *.xcworkspace
 *.code-workspace
+
+# Python
+__pycache__/
+*.pyc

@@ -4,57 +4,53 @@ Dieses Dokument beschreibt **wie** wir Berlin Expendables bauen: Engine-Entschei
 
 ---
 
-## 1. Engine-Entscheidung: Unreal Engine 5.8
+## 1. Engine-Entscheidung: Unreal Engine 5.8, **Blueprint-first**
 
-Zielbild: ein **grafisch opulentes 2D-Spiel mit 3D-VFX**. UE 5.8 liefert dafür Paper2D (Sprites, Flipbooks, Sockets), Niagara (GPU-Partikel, Mesh-Partikel, Light-Renderer), echtes Licht auf Sprites (Normalmaps, Punktlichter bei Explosionen), Bloom/Color-Grading, Chaos für Trümmer und einen Desktop-Build ohne Umwege.
+Zielbild: ein **grafisch opulentes 2D-Spiel mit 3D-VFX**, das du selbst im Editor weiterbauen kannst. Deshalb ist das Projekt ein **reines Blueprint-Projekt**: kein C++-Modul, kein Compiler, kein Visual Studio nötig. UE 5.8 liefert Paper2D (Sprites, Flipbooks, Sockets), Niagara (GPU-Partikel, Mesh-Partikel, Light-Renderer), echtes Licht auf Sprites, Bloom/Color-Grading und einen Desktop-Build ohne Umwege.
 
-Was **nicht** aus der Engine kommt, sondern aus eigenem C++:
-- **Zerstörbares Terrain** (Tile-Grid mit HP, Krater, Auto-Kanten) als Instanced-Static-Mesh-Quads in 16×16-Chunks; UE-Kollision wird dafür nicht benutzt.
-- **2D-Physik** (AABB gegen das Grid, One-Way-Plattformen, Coyote-Zeit, Eingabepuffer) in einem festen 1/120-s-Schritt. Das Spielgefühl ist damit identisch mit dem Web-Prototyp, dessen Werte 1:1 übernommen wurden (px/Frame × 120 = uu/s bei 2×-Assets).
-- **Lokaler 4-Spieler-Input** ohne Enhanced-Input-Assets: Controller 0 pollt beide Tastatur-Layouts, Controller 1–3 die Gamepads (`bOffsetPlayerGamepadIds`). Drop-in per Sprung/Start.
+Was Blueprints hier leisten müssen (alles machbar, siehe `BLUEPRINTS.md`):
+- **Zerstörbares Terrain** als Byte-Array-Grid mit HP, gerendert über Instanced-Static-Mesh-Quads mit Custom-Data (UV-Rechteck + Schaden). UE-Kollision wird dafür nicht benutzt.
+- **2D-Physik** (AABB gegen das Grid, One-Way-Plattformen, Coyote-Zeit, Eingabepuffer) in einem festen 1/120-s-Schritt. Spielgefühl identisch mit dem Web-Prototyp, dessen Werte 1:1 übernommen sind (px/Frame × 120 = uu/s bei 2×-Assets).
+- **Lokaler 4-Spieler-Input** per Key-Polling (`Is Input Key Down`) ohne Enhanced-Input-Assets: Controller 0 bedient beide Tastatur-Layouts, Controller 1–3 die Gamepads (`bOffsetPlayerGamepadIds`). Drop-in per Sprung/Start.
 
-Der Web-Prototyp (`Prototype/Web`) bleibt als **Gameplay-Referenz und Balancing-Sandbox** im Repo: dort lassen sich Regeln in Sekunden testen, bevor sie nach C++ wandern.
+Der vollständige C++-Port unter `Reference/CppPort` wird **nicht kompiliert**; er ist die exakte Verhaltensreferenz für den Blueprint-Aufbau (jede Funktion, jede Zahl). Sollte Blueprint-Performance je nicht reichen, kann daraus ein schlankes C++-Modul nur für die Tile-Welt werden.
+
+Der Web-Prototyp (`Prototype/Web`) bleibt als **Gameplay-Referenz und Balancing-Sandbox** im Repo.
 
 ## 2. Projektstruktur
 
 ```
-BerlinExpendables.uproject          UE 5.8, Plugins: Paper2D, Niagara, PythonScriptPlugin, ModelContextProtocol, AllToolsets
+BerlinExpendables.uproject          UE 5.8 Blueprint-Projekt; Plugins: Paper2D, Niagara, PythonScriptPlugin, ModelContextProtocol, AllToolsets
 .mcp.json                           Claude-Code-Projektkonfiguration: unreal-mcp (http://127.0.0.1:8000/mcp)
-Config/                             DefaultEngine/Game/Input/Editor.ini (Pixel-Art-Renderer-Flags, Balancing, Tastenlayouts)
-Source/BerlinExpendables/           C++-Modul (16 Klassen, siehe unten)
-Content/Python/                     Editor-Automation: be_build_all.py baut alle Assets aus Content/Import
+Config/                             Renderer-Flags für Pixel-Art, kein Splitscreen, Gamepad-Offset
+Content/Python/                     Editor-Automation: be_build_all.py importiert Sprites, baut Flipbooks, Materialien, DataAssets, Map
 Content/Import/Placeholder/         Spritegen-Platzhalter in 2x (64-px-Figuren, 32-px-Tiles) + Atlanten
 Content/Import/AutoSprite/          Ziel für KI-Charaktere (nach pixelize)
 Content/Import/ComfyUI/             Ziel für Parallax-Ebenen (nach pixelize)
-Content/BE/, Content/Maps/          im Editor erzeugte .uasset/.umap (Git LFS)
+Content/BE/, Content/Maps/          im Editor erzeugte Blueprints/.uasset/.umap (Git LFS)
+Reference/CppPort/                  C++-Port als Verhaltensreferenz (nicht im Build)
 Tools/spritegen/                    prozeduraler Pixel-Art-Generator (Node)
 Tools/pixelize/pixelize.py          KI-Output -> Pixelraster, Palette, Outline, Normalmap, Tiling-Check
 Tools/comfyui/workflows/            ComfyUI-Workflow-Vorlagen (API-Format)
 Prototype/Web/                      Web-Prototyp (Vite/TS), npm run dev
-docs/                               Konzept, Styleguide, Prompt-Bücher, Runbook, Screenshots
+docs/                               Konzept, Styleguide, Blueprint-Bauplan, Prompt-Bücher, Runbook, Screenshots
 ```
 
-### C++-Klassen (Source/BerlinExpendables)
+### Blueprint-Klassen (Content/BE/Blueprints)
 
-| Klasse | Aufgabe |
+| Blueprint | Aufgabe |
 | --- | --- |
-| `BETypes.h` | Enums (Tiles, Aim, Items), `FBEInputFrame`, `FBEBody` (AABB), Waffen-/Projektilprofile, Levelraum↔UE-Umrechnung (`X=x, Z=-y, Y=Tiefe`) |
-| `UBEGameSettings`, `UBEInputSettings` | Project Settings: Balancing, Auflösung 640×360, Asset-Referenzen, VFX-Systeme, Tastenlayouts (alles in `DefaultGame.ini`) |
-| `UBELevelAsset`, `UBECharacterData`, `UBEWeaponLibrary`, `UBESpriteLibrary`, `UBETileSet` | DataAssets, vom Python-Import befüllt |
-| `ABETileWorld` | Grid, HP, Chunk-ISMs mit Custom-Data (UV-Rechteck + Schaden), Hintergrund- und Erdreich-Ebene, `MoveX/MoveY`, `DamageRadius`, Delegate `OnTileDestroyed` |
-| `ABEPawnBase` | Flipbook-Körper, Waffensprite am Socket `Hand`, Mündung am Socket `Muzzle`, fester Simulationsschritt |
-| `ABEBro` | Spieler: Laufen, Springen, Ducken, Zielen (h/u/d), Feuern, Granaten, Auto-Nahkampf, Pickups H/R/F/L, Kamerarand, Respawn |
-| `ABEMook` | Gegner-KI: Patrouille, Alarm (`!`), Salven, Panik, Betäubung |
-| `ABEProjectile`, `ABEGrenade` | Substep-Kollision, Durchschlag, Schwerkraft/Lob, Explosionen, Abpraller |
-| `ABEBarrel`, `ABECage`, `ABECaptive`, `ABEItem`, `ABEExit` | Gasflasche (Kettenreaktion), Käfig + Rettung, Items, Fluchttrabi |
-| `UBECombatLibrary` | `Explode()` (Terrain, Gegner, Spieler, Fässer, Käfige, FX, Licht, Shake, Hitstop), Trümmer (`ABEDebris`, 3D-Würfel), Lichtblitz (`ABEFlash`) |
-| `ABEGameState` | Leben, Punkte, Entity-Listen, Tod/Respawn/Rettung/Bro-Wechsel, Popups, Hitstop per Zeitdilatation |
-| `ABEGameMode`, `UBEGameInstance` | Weltaufbau aus Level-Asset, Spawns, 4 lokale Spieler, Beitritte, Neustart mit Wiederbeitritt |
-| `ABEPlayerController` | Tasten/Gamepad lesen, Eingabeframes, Join, F1-Debug |
-| `ABECameraActor`, `ABEParallaxLayer` | Ortho-Koop-Kamera (Bounding-Box, Shake, Pixel-Snapping, Bloom), manuelle Parallax-Ebenen |
-| `ABEHUD` | Canvas-HUD: Spielerkarten, Leben, Punkte, Banner, Popups, Titel, Endbildschirm, Debug-Boxen |
+| Enums/Structs `E_*`, `S_*` | Tiles, Aim, Items, Eingabeframe, AABB-Körper, Waffen-/Projektilprofile |
+| Daten-BPs `BP_CharacterData`, `BP_SpriteLibrary`, `BP_WeaponLibrary`, `BP_TileSet`, `BP_LevelData` | PrimaryDataAssets; Instanzen füllt `be_import_sprites.py` |
+| `BP_TileWorld` | Grid, HP, ISM-Rendering, `MoveX/MoveY`, `DamageRadius`, Dispatcher `OnTileDestroyed` |
+| `BP_PawnBase` → `BP_Bro`, `BP_Mook` | Flipbook-Körper, Waffe am Socket `Hand`, Substep-Simulation; Spieler bzw. Gegner-KI |
+| `BP_Projectile`, `BP_Grenade`, `BP_Barrel`, `BP_Cage`, `BP_Captive`, `BP_Item`, `BP_Exit`, `BP_Debris`, `BP_Flash` | Kampf, Requisiten, 3D-Trümmer, Lichtblitze |
+| `BPL_Combat` | `Explode`, Trümmer, Blut/Konfetti, Funken, Staub, Koordinaten |
+| `BP_GameState`, `BP_GameMode`, `BP_GameInstance`, `BP_PlayerController` | Regeln, Weltaufbau, 4 lokale Spieler, Drop-in, Neustart |
+| `BP_Camera`, `BP_ParallaxLayer` | Ortho-Koop-Kamera mit Shake, Parallax-Ebenen |
+| `WBP_HUD`, `WBP_Popup` | UMG-HUD, Banner, Popups, Endbildschirm |
 
-**Status:** Der Code ist vollständig, aber **noch nicht kompiliert** (in der Cloud-Session gibt es kein UE). Die erste lokale Editor-Session kompiliert per Live Coding und behebt Abweichungen der 5.8-API.
+**Status:** Enums/Structs/Blueprints werden in der ersten lokalen MCP-Session gebaut (Reihenfolge in `BLUEPRINTS.md`, Abschnitt 14). Python-Import, Materialien, Pixelize und Platzhalter-Assets sind fertig.
 
 ## 3. Rendering-Konzept „opulentes 2D“
 
@@ -97,7 +93,7 @@ Entities stehen in der Luftkachel über dem Boden. Später: In-Editor-Leveledito
 | # | Name | Inhalt | Definition of Done |
 | --- | --- | --- | --- |
 | **M0** | Fundament ✅ | Konzept, Styleguide, Web-Prototyp als Referenz, Spritegen, UE-5.8-Projekt mit vollständigem C++-Port, Editor-Automation, Pixelize-Pipeline, Prompt-Bücher, MCP-Runbook | Repo gepusht, Prototyp läuft, Python syntaxgeprüft |
-| **M1** | Erster Editor-Lauf (lokal, MCP) | C++ kompiliert, `be_build_all.py` durch, PIE spielbar mit Platzhaltern, Niagara-Grundsysteme, erste AutoSprite-Bros und ComfyUI-Ebenen für Welt 1 | 4 Spieler in PIE, Krater, Explosionen mit Licht und Trümmern, ein KI-Bro im Spiel |
+| **M1** | Erster Editor-Lauf (lokal, MCP) | Enums/Structs/Daten-Blueprints, `be_build_all.py` durch, Blueprints nach `BLUEPRINTS.md` Abschnitt 14 Schritt 1–7, PIE spielbar mit Platzhaltern, Niagara-Grundsysteme, erste AutoSprite-Bros und ComfyUI-Ebenen für Welt 1 | 4 Spieler in PIE, Krater, Explosionen mit Licht und Trümmern, ein KI-Bro im Spiel |
 | **M2** | Vertical Slice 1-1 | Level 1-1 fertig, Checkpoints, Koffer-Bomber, Wachhund, Combo-Score, UMG-HUD statt Canvas, Join-Screen mit Bro-Vorschau, SFX/Musik-Grundlage (MetaSounds) | 4 Leute spielen 1-1 durch |
 | **M3** | Die 4 Bros komplett | Echte Specials (Strobo, Bus, Bierkasten, Pommes-Splitter), Arcade-HP-Modus, Konfetti-Option, Normalmap-Licht auf allen Figuren, Chaos-Trümmer für Props | Jeder Bro fühlt sich anders an |
 | **M4** | Welt 1 komplett | 1-2 Dächer, 1-3 Kanal, Boss Abriss-Bernd (Sprite-Hierarchie), Weltkarte, Menüs, Speicherstand | Welt 1 in 15 Minuten durchspielbar |
@@ -106,16 +102,16 @@ Entities stehen in der Luftkachel über dem Boden. Später: In-Editor-Leveledito
 
 ## 7. Arbeitsweise pro Session
 
-**Lokal (mit MCP):** siehe `MCP_RUNBOOK.md`. Kurz: Editor offen, MCP-Server läuft, `claude` im Projektordner, Änderungen an C++ → `LiveCodingToolset.CompileLiveCoding`, Assets → Python/MCP, Test in PIE, speichern, committen (LFS).
+**Lokal (mit MCP):** siehe `MCP_RUNBOOK.md`. Kurz: Editor offen, MCP-Server läuft, `claude` im Projektordner, Blueprints → BlueprintTools per MCP (Bauplan `BLUEPRINTS.md`), Assets → Python/MCP, Test in PIE, speichern, committen (LFS).
 
-**Cloud/CLI ohne Editor:** alles Textbasierte (C++, Python, Levels, Docs, Spritegen, Pixelize). Prüfungen:
+**Cloud/CLI ohne Editor:** alles Textbasierte (Python, Levels, Docs, Spritegen, Pixelize, Bauplan). Prüfungen:
 ```bash
 npm install && npm run check        # Spritegen + Typecheck + Prototyp-Build
 python3 -m py_compile Content/Python/*.py Tools/pixelize/pixelize.py
 npm run preview & CHROMIUM_PATH=/opt/pw-browsers/chromium npm run shot   # Prototyp-Screenshots
 ```
 
-Balancing-Werte stehen an genau zwei Stellen: `Config/DefaultGame.ini` (Engine) und `Prototype/Web/src/game/characters.ts` / `constants.ts` (Prototyp). Wer eines ändert, zieht das andere nach.
+Balancing-Werte stehen an genau zwei Stellen: `Content/Python/be_import_sprites.py` (CHAR_TABLE → DataAssets) plus `BP_GameMode`-Variablen (Engine) und `Prototype/Web/src/game/characters.ts` / `constants.ts` (Prototyp). Wer eines ändert, zieht das andere nach.
 
 ## 8. Offene Entscheidungen
 
@@ -123,14 +119,16 @@ Balancing-Werte stehen an genau zwei Stellen: `Config/DefaultGame.ini` (Engine) 
 2. **Tastatur-Layout P2:** `, . /` + `M` oder Numpad?
 3. **AutoSprite-Stil:** 64-px-Figuren wie geplant, oder 96 px für mehr Detail (dann Tiles 48 px, Auflösung 960×540)?
 4. **Normalmap-Licht auf Sprites** von Anfang an (opulenter, mehr Pipeline-Aufwand) oder erst ab M3?
-5. **Bro-Roster** und **Bösewicht-Namen** („Beton & Rendite AG", „Baron von Beton") – Änderungswünsche?
+5. **HUD:** UMG-Widgets (Standard) oder Canvas-HUD-Blueprint (schneller zu bauen, weniger hübsch)?
+6. **Bro-Roster** und **Bösewicht-Namen** („Beton & Rendite AG", „Baron von Beton") – Änderungswünsche?
 
 ## 9. Risiken & Gegenmaßnahmen
 
 | Risiko | Gegenmaßnahme |
 | --- | --- |
-| C++ wurde ohne Compiler geschrieben | Erste lokale Session ist eine reine Kompilier-Runde; konservative, stabile APIs verwendet (Paper2D, ISM, Niagara-Basis) |
+| Blueprint-Graphen per MCP sind aufwendig | Bauplan mit exakten Funktionslisten; C++-Port als Referenz; schrittweise mit PIE-Tests (Abschnitt 14 in `BLUEPRINTS.md`) |
 | Paper2D gilt als „wartungsarm" | Nur Sprites/Flipbooks/Sockets genutzt; Terrain, Physik, Kamera sind eigen; Wechsel auf eigene Sprite-Quads wäre lokal in `ABEPawnBase` |
 | KI-Assets passen stilistisch nicht | Pixelize erzwingt Raster, Palette, Outline; Kontaktbogen-Review neben Spritegen-Figuren |
 | Ortho-Kamera + Lichter/Schatten | Schatten aus, nur Punktlichter und Bloom; falls nötig Perspektivkamera mit schmalem FOV (Pixel-Snapping bleibt) |
-| 4-Spieler-Input in UE | Key-Polling statt Enhanced Input, keine Asset-Abhängigkeit; Gamepad-Offset in `DefaultInput.ini` |
+| 4-Spieler-Input in UE | Key-Polling (`Is Input Key Down`) statt Enhanced Input, keine Asset-Abhängigkeit; Gamepad-Offset in `DefaultInput.ini` |
+| Blueprint-Performance (Tile-Grid, viele Projektile) | Byte-Arrays, Substep-Grenzen, Listen statt `Get All Actors`; Notausgang: C++-TileWorld aus `Reference/CppPort` |

@@ -1,6 +1,7 @@
 """Kompletter Editor-Aufbau in einem Rutsch (im Editor: Python-Konsole `py be_build_all.py` oder per MCP):
  1. Materialien  2. Sprites/Flipbooks/DataAssets importieren  3. Level-Assets, Map, Settings.
-Danach: Play-in-Editor in L_Kreuzberg01, Sprung/Start drücken."""
+Läuft auch ohne die Daten-Blueprints (dann nur Sprites/Flipbooks/Materialien); nach dem Anlegen der
+Blueprints einfach erneut ausführen. Danach: Play-in-Editor in L_Kreuzberg01, Sprung/Start drücken."""
 import importlib
 import unreal
 

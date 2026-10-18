@@ -29,7 +29,7 @@ private:
 	float Life = 1.f;
 	int32 Pierce = 0;
 	float SpinAngle = 0.f;
-	TSet<TWeakObjectPtr<AActor>> Hit;
+	TSet<FObjectKey> Hit;
 	void Impact();
 	void UpdateVisual();
 };

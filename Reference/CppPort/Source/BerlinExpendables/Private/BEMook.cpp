@@ -120,7 +120,7 @@ void ABEMook::SimStep(float Dt)
 		}
 	}
 
-	Vel.Y = FMath::Min(S->MaxFallSpeed, Vel.Y + S->Gravity * Dt);
+	Vel.Y = FMath::Min<double>(S->MaxFallSpeed, Vel.Y + S->Gravity * Dt);
 	if (W->MoveX(Box, Vel.X * Dt)) { Vel.X = 0.f; if (State == EBEMookState::Patrol || State == EBEMookState::Panic) Facing *= -1; }
 	if (W->MoveY(Box, Vel.Y * Dt)) { bOnGround = Vel.Y > 0.f; Vel.Y = 0.f; } else bOnGround = false;
 	if (Box.Pos.Y > W->PixelHeight() + 80.f) Kill();

@@ -44,8 +44,8 @@ void ABECameraActor::ClampToLevel()
 {
 	ABEGameState* GS = GetWorld() ? GetWorld()->GetGameState<ABEGameState>() : nullptr;
 	if (!GS || !GS->TileWorld) return;
-	View.X = FMath::Clamp(View.X, 0.f, FMath::Max(0.f, GS->TileWorld->PixelWidth() - ViewSize.X));
-	View.Y = FMath::Clamp(View.Y, 0.f, FMath::Max(0.f, GS->TileWorld->PixelHeight() - ViewSize.Y));
+	View.X = FMath::Clamp<double>(View.X, 0.0, FMath::Max<double>(0.0, GS->TileWorld->PixelWidth() - ViewSize.X));
+	View.Y = FMath::Clamp<double>(View.Y, 0.0, FMath::Max<double>(0.0, GS->TileWorld->PixelHeight() - ViewSize.Y));
 }
 
 void ABECameraActor::SnapTo(FVector2D Center)

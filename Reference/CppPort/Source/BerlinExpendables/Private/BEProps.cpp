@@ -173,7 +173,7 @@ void ABEItem::Tick(float DeltaSeconds)
 	ABEGameState* S = UBECombatLibrary::GS(this);
 	ABETileWorld* W = S ? S->TileWorld.Get() : nullptr;
 	if (!S || !W || bDead) return;
-	Vel.Y = FMath::Min(600.f, Vel.Y + 900.f * Dt);
+	Vel.Y = FMath::Min<double>(600.0, Vel.Y + 900.f * Dt);
 	if (W->MoveX(Box, Vel.X * Dt)) Vel.X = 0.f;
 	if (W->MoveY(Box, Vel.Y * Dt)) { Vel.Y = 0.f; Vel.X *= 0.8f; }
 	Life -= Dt; Bob += Dt;

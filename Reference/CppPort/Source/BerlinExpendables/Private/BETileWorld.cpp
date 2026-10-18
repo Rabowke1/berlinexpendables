@@ -9,7 +9,6 @@ ABETileWorld::ABETileWorld()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	TileSize = UBEGameSettings::Get()->TileSize;
 }
 
 void ABETileWorld::BeginPlay()
@@ -39,6 +38,7 @@ void ABETileWorld::ParseRows(const TArray<FString>& Rows)
 	for (const FString& R : Rows) W = FMath::Max(W, R.Len());
 	Tiles.Init(0, W * H); Hp.Init(0.f, W * H); Back.Init(0, W * H); WasSolid.Init(0, W * H); Instance.Init(-1, W * H);
 	Spawns.Reset();
+	auto AddSpawn = [this](const TCHAR* Type, int32 X, int32 Y, const FString& Arg) { FBEEntitySpawn E; E.Type = Type; E.TX = X; E.TY = Y; E.Arg = Arg; Spawns.Add(E); };
 
 	for (int32 Y = 0; Y < H; ++Y)
 	{
@@ -61,14 +61,14 @@ void ABETileWorld::ParseRows(const TArray<FString>& Rows)
 			case TEXT('r'): B = EBEBack::Brick; break;
 			case TEXT('g'): B = EBEBack::Graffiti; break;
 			case TEXT('P'): SpawnTile = FIntPoint(X, Y); break;
-			case TEXT('m'): Spawns.Add({ TEXT("mook"), X, Y, TEXT("") }); break;
-			case TEXT('s'): Spawns.Add({ TEXT("security"), X, Y, TEXT("") }); break;
-			case TEXT('b'): Spawns.Add({ TEXT("barrel"), X, Y, TEXT("") }); break;
-			case TEXT('k'): Spawns.Add({ TEXT("cage"), X, Y, TEXT("") }); break;
-			case TEXT('E'): Spawns.Add({ TEXT("exit"), X, Y, TEXT("") }); break;
-			case TEXT('+'): Spawns.Add({ TEXT("life"), X, Y, TEXT("") }); break;
+			case TEXT('m'): AddSpawn(TEXT("mook"), X, Y, FString());  break;
+			case TEXT('s'): AddSpawn(TEXT("security"), X, Y, FString());  break;
+			case TEXT('b'): AddSpawn(TEXT("barrel"), X, Y, FString());  break;
+			case TEXT('k'): AddSpawn(TEXT("cage"), X, Y, FString());  break;
+			case TEXT('E'): AddSpawn(TEXT("exit"), X, Y, FString());  break;
+			case TEXT('+'): AddSpawn(TEXT("life"), X, Y, FString());  break;
 			case TEXT('H'): case TEXT('R'): case TEXT('F'): case TEXT('L'): case TEXT('B'):
-				Spawns.Add({ TEXT("item"), X, Y, FString(1, &C) }); break;
+				AddSpawn(TEXT("item"), X, Y, FString::Chr(C)); break;
 			default: break;
 			}
 			Tiles[I] = static_cast<uint8>(T);
@@ -102,7 +102,7 @@ UInstancedStaticMeshComponent* ABETileWorld::MakeLayer(FName Name)
 	ISM->SetMobility(EComponentMobility::Movable);
 	ISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ISM->SetCastShadow(false);
-	ISM->NumCustomDataFloats = 5;   // u0 v0 u1 v1 damage
+	ISM->SetNumCustomDataFloats(5);   // u0 v0 u1 v1 damage
 	if (QuadMesh) ISM->SetStaticMesh(QuadMesh);
 	if (TileMaterial) ISM->SetMaterial(0, TileMaterial);
 	ISM->RegisterComponent();
@@ -230,8 +230,8 @@ bool ABETileWorld::DamageTile(int32 TX, int32 TY, float Amount)
 int32 ABETileWorld::DamageRadius(FVector2D Center, float Radius, float Power)
 {
 	int32 Destroyed = 0;
-	const int32 TX0 = FMath::FloorToInt((Center.X - Radius) / TileSize), TX1 = FMath::FloorToInt((Center.X + Radius) / TileSize);
-	const int32 TY0 = FMath::FloorToInt((Center.Y - Radius) / TileSize), TY1 = FMath::FloorToInt((Center.Y + Radius) / TileSize);
+	const int32 TX0 = FMath::FloorToInt32((Center.X - Radius) / TileSize), TX1 = FMath::FloorToInt32((Center.X + Radius) / TileSize);
+	const int32 TY0 = FMath::FloorToInt32((Center.Y - Radius) / TileSize), TY1 = FMath::FloorToInt32((Center.Y + Radius) / TileSize);
 	for (int32 TY = TY0; TY <= TY1; ++TY)
 	{
 		for (int32 TX = TX0; TX <= TX1; ++TX)
@@ -249,15 +249,15 @@ bool ABETileWorld::MoveX(FBEBody& B, float DX) const
 {
 	if (FMath::IsNearlyZero(DX)) return false;
 	const float NX = B.Pos.X + DX;
-	const int32 Y0 = FMath::FloorToInt(B.Pos.Y / TileSize), Y1 = FMath::FloorToInt((B.Pos.Y + B.Size.Y - 0.01f) / TileSize);
+	const int32 Y0 = FMath::FloorToInt32(B.Pos.Y / TileSize), Y1 = FMath::FloorToInt32((B.Pos.Y + B.Size.Y - 0.01f) / TileSize);
 	if (DX > 0.f)
 	{
-		const int32 TX = FMath::FloorToInt((NX + B.Size.X - 0.01f) / TileSize);
+		const int32 TX = FMath::FloorToInt32((NX + B.Size.X - 0.01f) / TileSize);
 		for (int32 TY = Y0; TY <= Y1; ++TY) if (IsSolidTile(GetTile(TX, TY))) { B.Pos.X = TX * TileSize - B.Size.X; return true; }
 	}
 	else
 	{
-		const int32 TX = FMath::FloorToInt(NX / TileSize);
+		const int32 TX = FMath::FloorToInt32(NX / TileSize);
 		for (int32 TY = Y0; TY <= Y1; ++TY) if (IsSolidTile(GetTile(TX, TY))) { B.Pos.X = (TX + 1) * TileSize; return true; }
 	}
 	B.Pos.X = NX;
@@ -268,10 +268,10 @@ bool ABETileWorld::MoveY(FBEBody& B, float DY) const
 {
 	if (FMath::IsNearlyZero(DY)) return false;
 	const float NY = B.Pos.Y + DY;
-	const int32 X0 = FMath::FloorToInt(B.Pos.X / TileSize), X1 = FMath::FloorToInt((B.Pos.X + B.Size.X - 0.01f) / TileSize);
+	const int32 X0 = FMath::FloorToInt32(B.Pos.X / TileSize), X1 = FMath::FloorToInt32((B.Pos.X + B.Size.X - 0.01f) / TileSize);
 	if (DY > 0.f)
 	{
-		const int32 TY = FMath::FloorToInt((NY + B.Size.Y - 0.01f) / TileSize);
+		const int32 TY = FMath::FloorToInt32((NY + B.Size.Y - 0.01f) / TileSize);
 		const bool bWasAbove = B.Pos.Y + B.Size.Y - 0.01f < TY * TileSize;
 		for (int32 TX = X0; TX <= X1; ++TX)
 		{
@@ -281,7 +281,7 @@ bool ABETileWorld::MoveY(FBEBody& B, float DY) const
 	}
 	else
 	{
-		const int32 TY = FMath::FloorToInt(NY / TileSize);
+		const int32 TY = FMath::FloorToInt32(NY / TileSize);
 		for (int32 TX = X0; TX <= X1; ++TX) if (IsSolidTile(GetTile(TX, TY))) { B.Pos.Y = (TY + 1) * TileSize; return true; }
 	}
 	B.Pos.Y = NY;
@@ -290,8 +290,8 @@ bool ABETileWorld::MoveY(FBEBody& B, float DY) const
 
 bool ABETileWorld::OnPlatformOnly(const FBEBody& B) const
 {
-	const int32 TY = FMath::FloorToInt((B.Pos.Y + B.Size.Y + 0.5f) / TileSize);
-	const int32 X0 = FMath::FloorToInt(B.Pos.X / TileSize), X1 = FMath::FloorToInt((B.Pos.X + B.Size.X - 0.01f) / TileSize);
+	const int32 TY = FMath::FloorToInt32((B.Pos.Y + B.Size.Y + 0.5f) / TileSize);
+	const int32 X0 = FMath::FloorToInt32(B.Pos.X / TileSize), X1 = FMath::FloorToInt32((B.Pos.X + B.Size.X - 0.01f) / TileSize);
 	bool bPlat = false;
 	for (int32 TX = X0; TX <= X1; ++TX)
 	{
@@ -304,8 +304,8 @@ bool ABETileWorld::OnPlatformOnly(const FBEBody& B) const
 
 bool ABETileWorld::FitsAt(const FBEBody& B) const
 {
-	const int32 X0 = FMath::FloorToInt(B.Pos.X / TileSize), X1 = FMath::FloorToInt((B.Pos.X + B.Size.X - 0.01f) / TileSize);
-	const int32 Y0 = FMath::FloorToInt(B.Pos.Y / TileSize), Y1 = FMath::FloorToInt((B.Pos.Y + B.Size.Y - 0.01f) / TileSize);
+	const int32 X0 = FMath::FloorToInt32(B.Pos.X / TileSize), X1 = FMath::FloorToInt32((B.Pos.X + B.Size.X - 0.01f) / TileSize);
+	const int32 Y0 = FMath::FloorToInt32(B.Pos.Y / TileSize), Y1 = FMath::FloorToInt32((B.Pos.Y + B.Size.Y - 0.01f) / TileSize);
 	for (int32 TY = Y0; TY <= Y1; ++TY) for (int32 TX = X0; TX <= X1; ++TX) if (IsSolidTile(GetTile(TX, TY))) return false;
 	return true;
 }

@@ -13,6 +13,7 @@ FLIPBOOK_DIR = f"{GEN_ROOT}/Flipbooks"
 DATA_DIR = f"{GEN_ROOT}/Data"
 MAT_DIR = f"{GEN_ROOT}/Materials"
 MAP_DIR = "/Game/Maps"
+BP_DIR = f"{GEN_ROOT}/Blueprints"
 
 ASSET_TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 EAL = unreal.EditorAssetLibrary
@@ -111,10 +112,25 @@ def make_flipbook(name, sprites, fps):
     return fb
 
 
+def bp_class(name):
+    """Generierte Klasse eines Blueprints unter /Game/BE/Blueprints (None, wenn es noch nicht existiert)."""
+    return unreal.load_class(None, f"{BP_DIR}/{name}.{name}_C")
+
+
 def make_data_asset(name, cls):
+    """Instanz eines (Blueprint-)PrimaryDataAsset. cls = generierte Klasse, z. B. bp_class("BP_CharacterData")."""
     factory = unreal.DataAssetFactory()
     factory.set_editor_property("data_asset_class", cls)
     return create_asset(name, DATA_DIR, cls, factory)
+
+
+def set_props(obj, **props):
+    """set_editor_property für mehrere Blueprint-Variablen; fehlende Variablen werden gemeldet, nicht geworfen."""
+    for k, v in props.items():
+        try:
+            obj.set_editor_property(k, v)
+        except Exception as e:  # noqa: BLE001
+            warn(f"{obj.get_name()}: Variable '{k}' fehlt oder Typ passt nicht ({e}). Siehe docs/BLUEPRINTS.md, Abschnitt Daten-Blueprints.")
 
 
 def hex_to_linear(h):
