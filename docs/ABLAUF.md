@@ -1,153 +1,136 @@
-# Ablauf, Technik & Asset-Pipeline
+# Ablauf, Technik & Asset-Pipeline (Unreal Engine 5.8)
 
-Dieses Dokument beschreibt **wie** wir Berlin Expendables bauen: Technologie, Architektur, Asset-Pipeline (eigener Spritegen + AutoSprite), Levelformat, Meilensteine und die Arbeitsweise pro Session.
+Dieses Dokument beschreibt **wie** wir Berlin Expendables bauen: Engine-Entscheidung, Architektur des UE-Projekts, Asset-Pipeline mit AutoSprite, ComfyUI und eigenem Spritegen, Levelformat, Meilensteine und die Arbeitsweise pro Session. Die MCP-Verbindungen (Unreal, AutoSprite, ComfyUI) laufen auf deinem Rechner; Schritt-für-Schritt-Checkliste in [`MCP_RUNBOOK.md`](MCP_RUNBOOK.md).
 
 ---
 
-## 1. Technologie-Entscheidung
+## 1. Engine-Entscheidung: Unreal Engine 5.8
 
-**Gewählt: TypeScript + Vite + eigener Canvas-2D-Renderer (kein Game-Framework).**
+Zielbild: ein **grafisch opulentes 2D-Spiel mit 3D-VFX**. UE 5.8 liefert dafür Paper2D (Sprites, Flipbooks, Sockets), Niagara (GPU-Partikel, Mesh-Partikel, Light-Renderer), echtes Licht auf Sprites (Normalmaps, Punktlichter bei Explosionen), Bloom/Color-Grading, Chaos für Trümmer und einen Desktop-Build ohne Umwege.
 
-| Kriterium | Eigene Canvas-Engine (gewählt) | Phaser 3 | Godot 4 |
-| --- | --- | --- | --- |
-| Zerstörbares Tile-Terrain mit eigener Physik | volle Kontrolle, ~300 Zeilen | geht, aber gegen Arcade-Physics gearbeitet | gut, aber Tilemap-Mutation + Kollision selbst bauen |
-| Pixel-perfektes Rendering (Integer-Skalierung, kein Smoothing) | trivial | möglich, Fallstricke bei Kamera-Zoom | gut |
-| Lokaler 4-Spieler-Input | Gamepad-API direkt | ok | sehr gut |
-| In dieser Cloud-Session baubar & testbar (Screenshots per Playwright) | ✅ | ✅ | ❌ (kein Godot-Binary, Export aufwendig) |
-| Distribution | Browser sofort; Desktop später per Tauri/Electron; Steam-Deck-Browser | gleich | native Exporte |
-| Bundle | ~55 KB JS + ~200 KB Assets | ~1,2 MB | – |
+Was **nicht** aus der Engine kommt, sondern aus eigenem C++:
+- **Zerstörbares Terrain** (Tile-Grid mit HP, Krater, Auto-Kanten) als Instanced-Static-Mesh-Quads in 16×16-Chunks; UE-Kollision wird dafür nicht benutzt.
+- **2D-Physik** (AABB gegen das Grid, One-Way-Plattformen, Coyote-Zeit, Eingabepuffer) in einem festen 1/120-s-Schritt. Das Spielgefühl ist damit identisch mit dem Web-Prototyp, dessen Werte 1:1 übernommen wurden (px/Frame × 120 = uu/s bei 2×-Assets).
+- **Lokaler 4-Spieler-Input** ohne Enhanced-Input-Assets: Controller 0 pollt beide Tastatur-Layouts, Controller 1–3 die Gamepads (`bOffsetPlayerGamepadIds`). Drop-in per Sprung/Start.
 
-Fazit: Für ein Broforce-artiges Spiel ist das Terrain der Kern, und das will man selbst in der Hand haben. Die Engine ist bewusst klein; falls wir später doch Godot wollen, sind Konzept, Palette, Spritegen-Assets und Levelformat 1:1 übertragbar.
+Der Web-Prototyp (`Prototype/Web`) bleibt als **Gameplay-Referenz und Balancing-Sandbox** im Repo: dort lassen sich Regeln in Sekunden testen, bevor sie nach C++ wandern.
 
-## 2. Architektur
+## 2. Projektstruktur
 
 ```
-src/
-  main.ts                 Boot: Assets laden, Welt erzeugen, Loop starten
-  engine/                 spielunabhängig
-    renderer.ts           480x270-Pixelbuffer, Integer-Skalierung, Sprite/Parallax/Text
-    font.ts               5x7-Bitmap-Font (pro Farbe gecacht)
-    input.ts              Tastatur x2 + Gamepads x4, Edge-Detection, Join-Logik
-    camera.ts             Bounding-Box-Kamera + Shake (Trauma²)
-    loop.ts               fester 60-Hz-Step mit Akkumulator
-    audio.ts              WebAudio-Retro-Synth (SFX ohne Dateien)
-    assets.ts             Atlas-Loader (TexturePacker-JSON-Hash + Zusatzfelder)
-  game/
-    world.ts              Zustand, Entity-Listen, Explosionen, Rettung, Respawn, Draw-Reihenfolge
-    tilemap.ts            Tile-Typen, HP, AABB-Kollision (moveX/moveY, One-Way-Plattformen), Zeichnen mit Auto-Kanten + Rissen
-    level.ts              ASCII-Parser
-    characters.ts         Bros, Pickups, Gegnerprofile (alle Balancing-Zahlen an einem Ort)
-    particles.ts, hud.ts
-    entities/             player, mook, bullet, grenade, props (Fass, Käfig, Gefangener, Item, Trabi), fx (Explosion, Gibs, Popups)
-  data/levels/            Levels als ASCII
-tools/spritegen/          prozeduraler Pixel-Art-Generator (Node, tsx)
-public/assets/            generierte PNG + JSON (eingecheckt)
-scripts/shot.mjs          Playwright-Smoke-Test, schreibt docs/screenshots/
+BerlinExpendables.uproject          UE 5.8, Plugins: Paper2D, Niagara, PythonScriptPlugin, ModelContextProtocol, AllToolsets
+.mcp.json                           Claude-Code-Projektkonfiguration: unreal-mcp (http://127.0.0.1:8000/mcp)
+Config/                             DefaultEngine/Game/Input/Editor.ini (Pixel-Art-Renderer-Flags, Balancing, Tastenlayouts)
+Source/BerlinExpendables/           C++-Modul (16 Klassen, siehe unten)
+Content/Python/                     Editor-Automation: be_build_all.py baut alle Assets aus Content/Import
+Content/Import/Placeholder/         Spritegen-Platzhalter in 2x (64-px-Figuren, 32-px-Tiles) + Atlanten
+Content/Import/AutoSprite/          Ziel für KI-Charaktere (nach pixelize)
+Content/Import/ComfyUI/             Ziel für Parallax-Ebenen (nach pixelize)
+Content/BE/, Content/Maps/          im Editor erzeugte .uasset/.umap (Git LFS)
+Tools/spritegen/                    prozeduraler Pixel-Art-Generator (Node)
+Tools/pixelize/pixelize.py          KI-Output -> Pixelraster, Palette, Outline, Normalmap, Tiling-Check
+Tools/comfyui/workflows/            ComfyUI-Workflow-Vorlagen (API-Format)
+Prototype/Web/                      Web-Prototyp (Vite/TS), npm run dev
+docs/                               Konzept, Styleguide, Prompt-Bücher, Runbook, Screenshots
 ```
 
-**Prinzipien**
-- Simulation läuft mit festem Schritt (1/60 s), alle Geschwindigkeiten sind px/Frame. Rendering interpoliert nicht (Pixel-Art).
-- Entities sind einfache Klassen in typisierten Listen (`players`, `mooks`, `bullets` …), keine ECS-Magie. `World` ist der einzige Ort mit Querbeziehungen (Explosion trifft alles).
-- Keine Sprite-Rotation außer 90°-Schritte (Waffen hoch/runter, Kugeln vertikal). Spiegeln nur horizontal.
-- Zahlen fürs Balancing stehen ausschließlich in `characters.ts` und `constants.ts`.
+### C++-Klassen (Source/BerlinExpendables)
 
-## 3. Asset-Pipeline
+| Klasse | Aufgabe |
+| --- | --- |
+| `BETypes.h` | Enums (Tiles, Aim, Items), `FBEInputFrame`, `FBEBody` (AABB), Waffen-/Projektilprofile, Levelraum↔UE-Umrechnung (`X=x, Z=-y, Y=Tiefe`) |
+| `UBEGameSettings`, `UBEInputSettings` | Project Settings: Balancing, Auflösung 640×360, Asset-Referenzen, VFX-Systeme, Tastenlayouts (alles in `DefaultGame.ini`) |
+| `UBELevelAsset`, `UBECharacterData`, `UBEWeaponLibrary`, `UBESpriteLibrary`, `UBETileSet` | DataAssets, vom Python-Import befüllt |
+| `ABETileWorld` | Grid, HP, Chunk-ISMs mit Custom-Data (UV-Rechteck + Schaden), Hintergrund- und Erdreich-Ebene, `MoveX/MoveY`, `DamageRadius`, Delegate `OnTileDestroyed` |
+| `ABEPawnBase` | Flipbook-Körper, Waffensprite am Socket `Hand`, Mündung am Socket `Muzzle`, fester Simulationsschritt |
+| `ABEBro` | Spieler: Laufen, Springen, Ducken, Zielen (h/u/d), Feuern, Granaten, Auto-Nahkampf, Pickups H/R/F/L, Kamerarand, Respawn |
+| `ABEMook` | Gegner-KI: Patrouille, Alarm (`!`), Salven, Panik, Betäubung |
+| `ABEProjectile`, `ABEGrenade` | Substep-Kollision, Durchschlag, Schwerkraft/Lob, Explosionen, Abpraller |
+| `ABEBarrel`, `ABECage`, `ABECaptive`, `ABEItem`, `ABEExit` | Gasflasche (Kettenreaktion), Käfig + Rettung, Items, Fluchttrabi |
+| `UBECombatLibrary` | `Explode()` (Terrain, Gegner, Spieler, Fässer, Käfige, FX, Licht, Shake, Hitstop), Trümmer (`ABEDebris`, 3D-Würfel), Lichtblitz (`ABEFlash`) |
+| `ABEGameState` | Leben, Punkte, Entity-Listen, Tod/Respawn/Rettung/Bro-Wechsel, Popups, Hitstop per Zeitdilatation |
+| `ABEGameMode`, `UBEGameInstance` | Weltaufbau aus Level-Asset, Spawns, 4 lokale Spieler, Beitritte, Neustart mit Wiederbeitritt |
+| `ABEPlayerController` | Tasten/Gamepad lesen, Eingabeframes, Join, F1-Debug |
+| `ABECameraActor`, `ABEParallaxLayer` | Ortho-Koop-Kamera (Bounding-Box, Shake, Pixel-Snapping, Bloom), manuelle Parallax-Ebenen |
+| `ABEHUD` | Canvas-HUD: Spielerkarten, Leben, Punkte, Banner, Popups, Titel, Endbildschirm, Debug-Boxen |
 
-### 3.1 Spritegen (unser Generator) – der garantierte Weg
+**Status:** Der Code ist vollständig, aber **noch nicht kompiliert** (in der Cloud-Session gibt es kein UE). Die erste lokale Editor-Session kompiliert per Live Coding und behebt Abweichungen der 5.8-API.
 
-`npm run assets` → `tools/spritegen/index.ts` erzeugt deterministisch alle Assets:
+## 3. Rendering-Konzept „opulentes 2D“
 
-- **Humanoid-Rig** (`humanoid.ts`): ein 32×32-Rig zeichnet Kopf, Torso, Arme, Beine pixelweise aus einem **Rezept** (Hautton, Haar/Hut-Stil, Shirt, Hose, Schuhe, Akzentfarbe, Props wie Schürze, Krawatte, Weste, Sonnenbrille, Bart). Posen: `idle` ×4, `run` ×8, `jump`, `fall`, `crouch`, `melee` ×3, `panic` ×4 (Gegner) – jeweils für Zielrichtung `h`/`u`/`d`. Dazu Porträt und Gibs.
-- **Waffen getrennt** (`weapons.ts`): jede Waffe als eigenes Sprite in 3 Ausrichtungen mit **Griff-** und **Mündungsanker**; der Körper exportiert pro Frame den **Hand-Anker**. Das Spiel setzt die Waffe zur Laufzeit zusammen → Waffen-Pickups ohne Frame-Explosion (Metal-Slug-Anforderung).
-- **Tiles/Props/Items** (`tiles.ts`), **Effekte/Projektile** (`fx.ts`), **Parallax-Hintergründe** (`backgrounds.ts`: Himmel mit Dither-Gradient, Skyline mit Fernsehturm und Kran, Altbau-Zeile mit Spätis).
-- **Atlas-Format** (`atlas.ts`): Shelf-Packing, TexturePacker-kompatibles JSON-Hash (`frames[name].frame`), plus `animations` (per Suffix `_n` gruppiert) und Zusatzfelder `hand`, `grip`, `tip`, `meta.box`.
-- **Kontaktbogen**: `docs/art/preview.png` (4× skaliert) und `docs/art/palette.png` zum schnellen Review.
+- **Auflösung:** 640×360 Welteinheiten im Bild (OrthoWidth 640). 1 uu = 1 Texel. Bei 1080p ist jeder Spielpixel exakt 3×3 Bildschirmpixel, bei 4K 6×6; die Kamera snappt auf ganze Einheiten, Sprites bleiben knackig.
+- **Sprites:** Paper2D, Nearest-Filter, keine Mips, lit-Material mit Vertexfarbe und optionaler Normalmap (`SpriteNormal`, erzeugt von `pixelize.py --normals`).
+- **Licht:** kühles Mondlicht + Skylight als Basis, warme Punktlichter aus Mündungsfeuer und Explosionen (`ABEFlash`), Neon aus Emissive. Bloom an, TAA/Motion Blur/Auto-Exposure aus.
+- **3D-VFX:** Niagara-Systeme für Explosion (Sprite-Sheet + GPU-Funken + Rauchring + Light-Renderer), Trümmer als Mesh-Partikel, Blut/Konfetti, Staub; physikalische Trümmerwürfel (`ABEDebris`) als sofort funktionierender Fallback. Später: Chaos-Fracture für Autos/Props, Volumetric Fog in der Club-Welt, Regen.
+- **Parallax:** Himmel statisch, Skyline 0,15, Häuserzeile 0,4, Nahebene 0,7; gemalte Ebenen aus ComfyUI, durch Pixelize in die Palette gebracht.
 
-Neue Figur = neues Rezept in `characters.ts` (≈8 Zeilen). Neue Pose = neue `poseFor`-Variante.
+## 4. Asset-Pipeline
 
-### 3.2 AutoSprite (autosprite.io) – KI-generierte Sprites
-
-Status: Aus dieser Cloud-Session ist `autosprite.io` durch die Netzwerk-Policy der Umgebung **nicht erreichbar** (siehe Hinweis in der Session). Die Pipeline ist so gebaut, dass AutoSprite-Output **ohne Codeänderung** einsetzbar ist:
-
-1. In AutoSprite (Web-App, MCP oder REST) aus einem Referenzbild/Preset die Animationen `idle`, `run`, `jump`, `fall`, `crouch`, `melee`, `death` erzeugen und als **PNG-Sheet + Atlas-JSON** exportieren (TexturePacker/Phaser-Format).
-2. `tools/import-atlas` (Meilenstein 1) normalisiert das JSON auf unser Format, benennt Animationen nach unserem Schema (`run_h_0 …`) und ergänzt Hand-Anker (halbautomatisch: Hautfarbe-Blob am rechten Rand des Torsos, sonst manuell im JSON).
-3. **Pixelize-Schritt (Pflicht):** KI-Output ist oft nur „pixel-art-ähnlich" (Anti-Aliasing, kein sauberes Raster, Farbrauschen). Der Schritt macht Nearest-Neighbor-Downscale auf das 32-px-Raster, quantisiert auf die **Berlin-Nacht-Palette**, entfernt Einzelpixel-Rauschen und zieht die 1-px-Outline. Erst danach gilt ein Sprite als „echte Pixel-Art" im Sinne des Styleguides.
-4. Review auf dem Kontaktbogen neben den Spritegen-Figuren: Proportionen (Kopf ≈ 8 px, Figur ≈ 23 px), Fußlinie, Lesbarkeit bei 1×.
-
-Empfohlene Arbeitsteilung: **Spritegen** für alles, was konsistent und zahlreich sein muss (Bros, Mooks, Tiles, FX), **AutoSprite** für Einzelstücke mit viel Charakter (Bosse, Fahrzeuge, Porträts, Titelbild) – immer durch den Pixelize-Schritt.
-
-### 3.3 Konventionen
-
-| Asset | Größe | Anker |
+| Quelle | Wofür | Weg ins Spiel |
 | --- | --- | --- |
-| Figur | 32×32 Frame, Box 10×22 (geduckt 10×17), Füße y=29 | Frame-Ursprung = (box.x − 11, box.y − 8) |
-| Tile | 16×16 | oben links |
-| Waffe | variabel, 1 px Outline-Rand | `grip` in der Hand, `tip` = Mündung |
-| Explosion | 32×32 ×8 | Mitte |
-| Items | 10×10 | oben links |
+| **AutoSprite** (MCP auf deinem PC) | Bros, Gegner, Gefangene, Bosse – Charakterdetail mit Animationen | Export (PNG + Atlas) → `pixelize.py --grid 64 --outline --normals` → `Content/Import/AutoSprite/<id>/` → `be_import_sprites.py` (BE_IMPORT_DIR) |
+| **ComfyUI** (MCP auf deinem PC) | Parallax-Ebenen, Titelbild, Weltkarte, Stimmungsbilder | Workflow `Tools/comfyui/workflows/parallax_layer.json` → `pixelize.py --width 960 --dither --tile-check` → Sprite → `ABEParallaxLayer` |
+| **Spritegen** (Node, hier) | Platzhalter in korrekter Größe, Tiles, Items, FX-Sheets, Waffen, Prototyp-Assets | `npm run assets` → `Content/Import/Placeholder` (2×) und `Prototype/Web/public/assets` (1×) |
+| **Niagara/Materialien** (Editor, MCP) | 3D-VFX, Tile- und Sprite-Materialien | `be_make_materials.py` + Niagara-Toolset per MCP |
 
-Animationsnamen: `<anim>_<aim>_<index>`; Aim ∈ {h, u, d}. Blickrichtung links = horizontal gespiegelt (x' = 31 − x).
+Verbindliche Maße: Figur-Frame 64×64 (Füße y = 61), Box 20×44 (geduckt 20×34), Tiles 32×32, Items 20×20, Projektile 6–18 px. Sockets: `Hand` am Körper, `Muzzle` an der Waffe, Pivot der Waffe = Griff. Details und Prompts: `PROMPTS_AUTOSPRITE.md`, `PROMPTS_COMFYUI.md`, `STYLEGUIDE.md`.
 
-## 4. Levelformat (ASCII)
+## 5. Levelformat (ASCII)
 
-Eine Datei pro Level (`src/data/levels/*.ts`), jede Zeile eine Tilereihe:
+Levels sind Textzeilen in einem `UBELevelAsset` (aus `Prototype/Web/src/data/levels/*.ts` übernommen). Ein Zeichen = ein 32-px-Tile:
 
 | Zeichen | Bedeutung | | Zeichen | Bedeutung |
 | --- | --- | --- | --- | --- |
 | `.` | Luft | | `P` | Spielerstart |
 | `#` | Erde (HP 3, Gras-Kante automatisch) | | `m` / `s` | Anzug-Scherge / Security |
-| `=` | Ziegel (HP 6, Betonkrone automatisch) | | `b` | Gasflasche (explodiert, Kettenreaktion) |
+| `=` | Ziegel (HP 6, Betonkrone automatisch) | | `b` | Gasflasche |
 | `S` | Stahl (unzerstörbar) | | `k` | Käfig mit Gefangenem |
-| `C` | Beton (HP 9) | | `c` | Kiste (HP 2, kann Item droppen) |
-| `-` | Plattform (einseitig durchlässig) | | `H R F L B` | Waffen-/Bomben-Pickup |
-| `w W r g` | Hintergrund: Putz, Fenster, Ziegel, Graffiti | | `+` | Extraleben (Currywurst) |
-| | | | `E` | Fluchttrabi (Levelende) |
+| `C` | Beton (HP 9) | | `c` | Kiste (HP 2, Item-Chance) |
+| `-` | Plattform (einseitig) | | `H R F L B` | Pickups |
+| `w W r g` | Hintergrund: Putz, Fenster, Ziegel, Graffiti | | `+` | Extraleben |
+| | | | `E` | Fluchttrabi |
 
-Entities stehen in der Luftkachel **über** dem Boden. Ein kleines Prüfskript (siehe Session-Notizen) meldet schwebende Objekte; das wird in M1 Teil von `npm run check`.
+Entities stehen in der Luftkachel über dem Boden. Später: In-Editor-Leveleditor als Editor-Utility-Widget (MCP/Python), das dieses Format schreibt.
 
-## 5. Meilensteine
+## 6. Meilensteine
 
 | # | Name | Inhalt | Definition of Done |
 | --- | --- | --- | --- |
-| **M0** | **Fundament** ✅ | Konzept, Styleguide, Projekt-Setup, Spritegen v1 (4 Bros, 2 Gegner, Gefangener, 10 Waffen, Tileset, FX, Hintergründe), Engine (Renderer, Input ×4, Kamera, Font, Synth), Gameplay-Prototyp: Laufen/Springen/Ducken, 4 Signaturwaffen, Granaten, Explosionen mit Terrainzerstörung, Gegner-KI (Patrouille, Alarm, Salven, Panik), Käfige/Rettung/Bro-Wechsel, Pickups H/R/F/L/B, Fluchttrabi, HUD, Drop-in-Koop, Game Over/Win | `npm run check` grün, Smoke-Test liefert Screenshots, Branch gepusht |
-| **M1** | Vertical Slice 1-1 | Level 1-1 fertig designt (3 Minuten, 3 Set-Pieces), Checkpoints, Koffer-Bomber, Wachhund, Combo-Score, Pause-Menü, Join-Screen mit Bro-Vorschau, Level-Validator in `check`, `import-atlas` + Pixelize für AutoSprite | 4 Leute spielen 1-1 durch, ohne auf Code zu schauen |
-| **M2** | Die 4 Bros komplett | Echte Specials (Strobo, Bus, Bierkasten, Pommes-Splitter), Nahkampf-Feinschliff, Freundbeschuss-Option, Arcade-HP-Modus, Konfetti-Modus im Menü, Hitstop/Shake-Tuning, mehr SFX | Jeder Bro fühlt sich anders an (Playtest-Fragebogen) |
-| **M3** | Welt 1 komplett | 1-2 Dächer, 1-3 Kanal, Boss Abriss-Bernd, Weltkarte, Titel/Optionen, Musik-Tracker, Speicherstand (localStorage) | Welt 1 in 15 Minuten durchspielbar, Boss mit 3 Phasen |
-| **M4** | Content-Ausbau | Welt 2 + 3, Fahrzeuge (Trabi-Slug, Bus), 4 weitere Bros, Drohnen, Scharfschützen, Heli | 3 Welten, 8 Bros |
-| **M5** | Polish & Release | Welt 4 + 5, Finale, Balancing, Performance-Pass, Controller-Remapping-UI, Desktop-Build (Tauri), itch.io/Steam-Deck-Test, Trailer-GIFs | Release-Kandidat |
+| **M0** | Fundament ✅ | Konzept, Styleguide, Web-Prototyp als Referenz, Spritegen, UE-5.8-Projekt mit vollständigem C++-Port, Editor-Automation, Pixelize-Pipeline, Prompt-Bücher, MCP-Runbook | Repo gepusht, Prototyp läuft, Python syntaxgeprüft |
+| **M1** | Erster Editor-Lauf (lokal, MCP) | C++ kompiliert, `be_build_all.py` durch, PIE spielbar mit Platzhaltern, Niagara-Grundsysteme, erste AutoSprite-Bros und ComfyUI-Ebenen für Welt 1 | 4 Spieler in PIE, Krater, Explosionen mit Licht und Trümmern, ein KI-Bro im Spiel |
+| **M2** | Vertical Slice 1-1 | Level 1-1 fertig, Checkpoints, Koffer-Bomber, Wachhund, Combo-Score, UMG-HUD statt Canvas, Join-Screen mit Bro-Vorschau, SFX/Musik-Grundlage (MetaSounds) | 4 Leute spielen 1-1 durch |
+| **M3** | Die 4 Bros komplett | Echte Specials (Strobo, Bus, Bierkasten, Pommes-Splitter), Arcade-HP-Modus, Konfetti-Option, Normalmap-Licht auf allen Figuren, Chaos-Trümmer für Props | Jeder Bro fühlt sich anders an |
+| **M4** | Welt 1 komplett | 1-2 Dächer, 1-3 Kanal, Boss Abriss-Bernd (Sprite-Hierarchie), Weltkarte, Menüs, Speicherstand | Welt 1 in 15 Minuten durchspielbar |
+| **M5** | Content-Ausbau | Welt 2 + 3, Fahrzeuge (Trabi-Slug, BVG-Bus), 4 weitere Bros, Drohnen, Scharfschützen | 3 Welten, 8 Bros |
+| **M6** | Polish & Release | Welt 4 + 5, Finale, Balancing, Performance, Controller-Remapping, Packaging Windows/Linux, Steam-Deck-Test | Release-Kandidat |
 
-Optional/parallel: In-Game-Level-Editor, Online-Koop (bewusst **nicht** vor M5, lokal ist der Kern).
+## 7. Arbeitsweise pro Session
 
-## 6. Arbeitsweise pro Session
+**Lokal (mit MCP):** siehe `MCP_RUNBOOK.md`. Kurz: Editor offen, MCP-Server läuft, `claude` im Projektordner, Änderungen an C++ → `LiveCodingToolset.CompileLiveCoding`, Assets → Python/MCP, Test in PIE, speichern, committen (LFS).
 
+**Cloud/CLI ohne Editor:** alles Textbasierte (C++, Python, Levels, Docs, Spritegen, Pixelize). Prüfungen:
 ```bash
-npm install          # einmalig
-npm run assets       # Sprites/Atlanten generieren (deterministisch, eingecheckt)
-npm run dev          # http://127.0.0.1:5173 – Hot Reload
-npm run check        # assets + typecheck + build (das läuft auch in CI)
-npm run preview & CHROMIUM_PATH=/opt/pw-browsers/chromium npm run shot   # Smoke-Test, Screenshots nach docs/screenshots
+npm install && npm run check        # Spritegen + Typecheck + Prototyp-Build
+python3 -m py_compile Content/Python/*.py Tools/pixelize/pixelize.py
+npm run preview & CHROMIUM_PATH=/opt/pw-browsers/chromium npm run shot   # Prototyp-Screenshots
 ```
 
-- Jede Session: Branch `claude/...` → Feature → `npm run check` → Screenshot(s) → Commit mit klarer Botschaft → Push.
-- Balancing-Änderungen nur in `characters.ts`/`constants.ts`, mit Begründung im Commit.
-- Neue Grafik immer zuerst auf dem Kontaktbogen (`docs/art/preview.png`) prüfen, dann im Spiel.
-- URL-Parameter für Tests: `?auto=1` (P1 automatisch beitreten), `?blut=0` (Konfetti). `F1` zeigt Hitboxen und Debug-Zahlen.
+Balancing-Werte stehen an genau zwei Stellen: `Config/DefaultGame.ini` (Engine) und `Prototype/Web/src/game/characters.ts` / `constants.ts` (Prototyp). Wer eines ändert, zieht das andere nach.
 
-## 7. Offene Entscheidungen (deine Stimme zählt)
+## 8. Offene Entscheidungen
 
-1. **Blut oder Konfetti als Default?** (aktuell Blut, Konfetti per `?blut=0`)
-2. **Steuerung P2 auf der Tastatur:** `, . /` + `M` oder lieber Numpad-only?
-3. **Zielplattform für Release:** Browser/itch.io zuerst, Desktop-Wrapper später – ok?
-4. **AutoSprite freischalten:** Soll ich `autosprite.io` (und ggf. `api.autosprite.io`) in den Netzwerk-Einstellungen der Cloud-Umgebung als erlaubte Domain eintragen lassen, damit ich die MCP/REST-Integration direkt bauen kann?
-5. **Bro-Roster:** Passen die 4 Start-Bros, oder tauschen wir einen (z. B. Technodore gegen eine Mauerpark-Karaoke-Sängerin mit Mikro-Schockwelle)?
-6. **Name der Bösewichte:** „Beton & Rendite AG" / „Baron von Beton" – Vorschläge willkommen.
+1. **Blut oder Konfetti als Default?** (`bGore` in den Settings, aktuell Blut)
+2. **Tastatur-Layout P2:** `, . /` + `M` oder Numpad?
+3. **AutoSprite-Stil:** 64-px-Figuren wie geplant, oder 96 px für mehr Detail (dann Tiles 48 px, Auflösung 960×540)?
+4. **Normalmap-Licht auf Sprites** von Anfang an (opulenter, mehr Pipeline-Aufwand) oder erst ab M3?
+5. **Bro-Roster** und **Bösewicht-Namen** („Beton & Rendite AG", „Baron von Beton") – Änderungswünsche?
 
-## 8. Risiken & Gegenmaßnahmen
+## 9. Risiken & Gegenmaßnahmen
 
 | Risiko | Gegenmaßnahme |
 | --- | --- |
-| Koop-Kamera frustriert (Nachzügler) | Bildrand blockt statt zu töten; optionaler Nachzügler-Teleport nach 3 s (M2) |
-| Performance bei vielen Partikeln/Tiles | Partikel-Cap 1500, nur sichtbare Tiles zeichnen; bei Bedarf Tile-Chunks cachen |
-| KI-Sprites passen stilistisch nicht | Pixelize-Schritt + Palette erzwingen, Spritegen-Figuren als Maßstab |
-| Umfang (5 Welten, 8 Bros) | Welt 1 komplett vor Breite; Bausteine wiederverwenden; jedes Level aus ASCII |
-| Netzwerk-Policy blockiert Tools | Alles Nötige ist lokal (Node, Chromium); externe Dienste bleiben optional |
+| C++ wurde ohne Compiler geschrieben | Erste lokale Session ist eine reine Kompilier-Runde; konservative, stabile APIs verwendet (Paper2D, ISM, Niagara-Basis) |
+| Paper2D gilt als „wartungsarm" | Nur Sprites/Flipbooks/Sockets genutzt; Terrain, Physik, Kamera sind eigen; Wechsel auf eigene Sprite-Quads wäre lokal in `ABEPawnBase` |
+| KI-Assets passen stilistisch nicht | Pixelize erzwingt Raster, Palette, Outline; Kontaktbogen-Review neben Spritegen-Figuren |
+| Ortho-Kamera + Lichter/Schatten | Schatten aus, nur Punktlichter und Bloom; falls nötig Perspektivkamera mit schmalem FOV (Pixel-Snapping bleibt) |
+| 4-Spieler-Input in UE | Key-Polling statt Enhanced Input, keine Asset-Abhängigkeit; Gamepad-Offset in `DefaultInput.ini` |

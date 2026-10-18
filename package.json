@@ -1,16 +1,16 @@
 {
-  "name": "berlin-expendables",
-  "version": "0.1.0",
+  "name": "berlin-expendables-tools",
+  "version": "0.2.0",
   "private": true,
-  "description": "Berlin Expendables - 4-Spieler Lokal-Koop Run'n'Gun in 2D-Pixel-Art",
+  "description": "Node-Werkzeuge für Berlin Expendables (UE 5.8): Spritegen-Platzhalter, Pixelize-Pipeline, Web-Gameplay-Prototyp",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "assets": "tsx tools/spritegen/index.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tools/tsconfig.json",
-    "shot": "node scripts/shot.mjs",
+    "dev": "vite Prototype/Web",
+    "build": "vite build Prototype/Web",
+    "preview": "vite preview Prototype/Web",
+    "assets": "tsx Tools/spritegen/index.ts --out Prototype/Web/public/assets --docs && tsx Tools/spritegen/index.ts --out Content/Import/Placeholder --scale 2",
+    "typecheck": "tsc --noEmit -p Prototype/Web/tsconfig.json && tsc --noEmit -p Tools/tsconfig.json",
+    "shot": "node Prototype/Web/scripts/shot.mjs",
     "check": "npm run assets && npm run typecheck && npm run build"
   },
   "devDependencies": {

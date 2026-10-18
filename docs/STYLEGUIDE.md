@@ -6,7 +6,7 @@ Verbindlich für alle Assets – ob aus dem Spritegen, aus AutoSprite oder von H
 
 ## 1. Grundregeln
 
-1. **Auflösung:** Das Spiel rendert in 480×270 und skaliert nur ganzzahlig (2×, 3×, 4×). Jedes Asset wird für 1× gezeichnet und muss bei 1× lesbar sein.
+1. **Auflösung:** Das Spiel zeigt 640×360 Welteinheiten (1 Einheit = 1 Texel) und skaliert ganzzahlig (1080p = 3×, 1440p = 4×, 4K = 6×). Jedes Asset wird für 1× gezeichnet und muss bei 1× lesbar sein. Der Web-Prototyp nutzt die halbe Größe (480×270, 16-px-Tiles); seine Assets werden für die Engine 2× nearest-neighbor skaliert.
 2. **Raster:** 1 Spielpixel = 1 Asset-Pixel. Keine Sub-Pixel, kein Anti-Aliasing, keine Weichzeichner, keine Verläufe (Dithering erlaubt: Bayer 2×2 wie im Himmel).
 3. **Palette:** ausschließlich die 36 Farben unten (`public/assets/palette.json`). Neue Farbe = Diskussion + Eintrag in `tools/spritegen/palette.ts`.
 4. **Outline:** 1 px `ink` (#0b0a12) um Figuren, Waffen, Props, Items. Tiles haben **keine** Outline (sie kacheln), Partikel auch nicht.
@@ -44,7 +44,7 @@ Verbindlich für alle Assets – ob aus dem Spritegen, aus AutoSprite oder von H
 
 ## 3. Figuren
 
-- **Frame 32×32, Kollisionsbox 10×22** (geduckt 10×17), Füße auf y = 29. Kopf 8×7 px, Torso 8×7, Beine 3 px breit. Proportion ≈ 3 Köpfe hoch – bewusst knubbelig für Lesbarkeit bei 1×.
+- **Frame 64×64, Kollisionsbox 20×44** (geduckt 20×34), Füße auf y = 61 (Prototyp: 32×32, Box 10×22, Füße y = 29). Platzhalter sind 3 Köpfe hoch; **AutoSprite-Figuren dürfen detaillierter sein (Metal-Slug-Proportion ≈ 4 Köpfe), müssen aber dieselbe Box, Fußlinie und Handposition einhalten.**
 - **Blick nach rechts** zeichnen, links wird gespiegelt. Ein Auge (1 px `ink` + 1 px `white`), Sonnenbrille = 5-px-Strich.
 - **Animation-Timing:** idle 4 Frames à 12 Ticks, run 8 à 5, melee 3 (4/5/3 Ticks), panic 4 à 5. Sprung/Fall je 1 Frame. Zielrichtungen `h`/`u`/`d` als eigene Frames.
 - **Waffen separat** mit Griff- und Mündungsanker; Körper exportiert den Hand-Anker. Waffe liegt *vor* der Hand, die Hand (2×2 Hautpixel) wird darüber gezeichnet.
@@ -53,12 +53,16 @@ Verbindlich für alle Assets – ob aus dem Spritegen, aus AutoSprite oder von H
 
 ## 4. Tiles & Welt
 
-- 16×16, kachelbar. Oberkanten automatisch (`dirt_top`, `brick_top`). Schaden zeigt sich über 3 Riss-Overlays, nicht über Farbänderung.
+- 32×32 in der Engine (16×16 im Prototyp), kachelbar. Oberkanten automatisch (`dirt_top`, `brick_top`). Schaden zeigt sich im Prototyp über Riss-Overlays, in der Engine über Abdunkeln per Instanz-Daten (Risse folgen).
 - Zerstörte Kacheln hinterlassen dunkles Erdreich (#1b1510), damit Krater Tiefe haben.
 - Hintergrund-Tiles (Putz, Fenster, Ziegel, Graffiti) sind matter und kontrastärmer als Vordergrund.
 - Parallax: Himmel (statisch), Skyline 0,15, Häuserzeile 0,4. Hintergründe bleiben in `night`/`navy`/`slate` mit wenigen `gold`-Fenstern – der Vordergrund hat die Sättigung.
 
-## 5. Effekte
+## 5. Effekte & 3D-VFX
+
+- **Regel:** Pixel-Art-Elemente (Sprites, Tiles) bleiben auf dem Raster; **Licht, Bloom, Niagara-Partikel und 3D-Trümmer dürfen darüber liegen** und in voller Auflösung rendern. Das ist gewollt und macht den Look „opulent“.
+- Explosionen: Niagara-Sprite-Sheet (8 Frames) + GPU-Funken + Rauchring + Light-Renderer (orange, 0,3 s); zusätzlich physikalische Trümmerwürfel in Tile-Farbe.
+- Sprites sind beleuchtet: Normalmaps aus `pixelize.py --normals`, kühles Grundlicht, warme Punktlichter aus Waffen und Explosionen. Keine Schatten (Ortho-Kamera), dafür Emissive für Neon.
 
 - Explosion 8 Frames: Weißkern → Gold → Orange → Rauchring (`slate`/`ash`), plus Pixel-Partikel.
 - Mündungsfeuer 3 Frames, Rauch 4 Frames, Blut = 1–2-px-Partikel mit Schwerkraft und Bounce.

@@ -1,0 +1,15 @@
+{
+  "_comment": "ComfyUI-Workflow (API-Format) für eine kachelbare Parallax-Ebene. Platzhalter in <> ersetzen; danach Tools/pixelize/pixelize.py --width 960 --dither --tile-check. Checkpoint: ein SDXL-Modell mit Pixel-Art-LoRA oder ein Pixel-Art-Finetune.",
+  "3": {
+    "class_type": "KSampler",
+    "inputs": { "seed": 1337, "steps": 28, "cfg": 6.5, "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 1.0,
+      "model": ["10", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] }
+  },
+  "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "<sdxl_pixelart_checkpoint>.safetensors" } },
+  "10": { "class_type": "LoraLoader", "inputs": { "model": ["4", 0], "clip": ["4", 1], "lora_name": "<pixel_art_lora>.safetensors", "strength_model": 0.8, "strength_clip": 0.8 } },
+  "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 1920, "height": 576, "batch_size": 1 } },
+  "6": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["10", 1], "text": "<PROMPT aus docs/PROMPTS_COMFYUI.md>, seamless horizontally tileable, side view, flat orthographic, night, pixel art, limited palette, clean silhouettes, no text" } },
+  "7": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["10", 1], "text": "blurry, photo, 3d render, perspective, text, watermark, people, characters, gradient banding, noise, jpeg artifacts, frame, border" } },
+  "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+  "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "be_parallax/<layer_name>", "images": ["8", 0] } }
+}

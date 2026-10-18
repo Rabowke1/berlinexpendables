@@ -4,7 +4,7 @@ on:
     branches: ['**']
   pull_request:
 jobs:
-  check:
+  tools-and-prototype:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,4 +17,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - name: Generierte Assets müssen eingecheckt sein
-        run: git diff --exit-code -- public/assets docs/art
+        run: git diff --exit-code -- Prototype/Web/public/assets Content/Import/Placeholder docs/art
+      - name: Python-Skripte syntaxprüfen (Editor-Skripte & Pixelize)
+        run: python3 -m py_compile Content/Python/*.py Tools/pixelize/pixelize.py
+  # Der UE-5.8-Build läuft lokal/im Editor (Live Coding über MCP) – siehe docs/MCP_RUNBOOK.md.

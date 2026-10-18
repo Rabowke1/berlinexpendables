@@ -9,9 +9,31 @@ import { buildFx } from './fx.js';
 import { buildSky, buildSkyline, buildMid } from './backgrounds.js';
 import { pack } from './atlas.js';
 
-const OUT = 'public/assets';
+// Aufruf: tsx Tools/spritegen/index.ts --out <dir> [--scale N] [--docs]
+const argv = process.argv.slice(2);
+const argOf = (k: string, d: string) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
+const OUT = argOf('--out', 'Prototype/Web/public/assets');
+const SCALE = Math.max(1, parseInt(argOf('--scale', '1'), 10) || 1);
+const DOCS = argv.includes('--docs');
 const t0 = Date.now();
 let files = 0;
+
+/** Skaliert einen Atlas (Frames + Anker) auf SCALE, passend zum nearest-neighbor-skalierten PNG. */
+function scaleAtlas<T extends { frames: Record<string, any>; meta: Record<string, unknown> }>(atlas: T): T {
+  if (SCALE === 1) return atlas;
+  const sc = (v: unknown): unknown => Array.isArray(v) ? v.map(sc) : typeof v === 'number' ? v * SCALE : v;
+  for (const f of Object.values(atlas.frames)) {
+    f.frame = { x: f.frame.x * SCALE, y: f.frame.y * SCALE, w: f.frame.w * SCALE, h: f.frame.h * SCALE };
+    for (const k of ['hand', 'grip', 'tip']) if (f[k]) f[k] = sc(f[k]);
+  }
+  const m = atlas.meta as Record<string, any>;
+  m.size = { w: m.size.w * SCALE, h: m.size.h * SCALE };
+  m.scale = String(SCALE);
+  for (const k of ['box', 'crouchBox']) if (m[k]) m[k] = Object.fromEntries(Object.entries(m[k]).map(([a, b]) => [a, (b as number) * SCALE]));
+  if (m.frameSize) m.frameSize *= SCALE;
+  if (m.tile) m.tile *= SCALE;
+  return atlas;
+}
 
 // --- Charaktere ---------------------------------------------------------------
 for (const ch of CHARACTERS) {
@@ -21,7 +43,9 @@ for (const ch of CHARACTERS) {
     `${ch.id}.png`, 512, 1,
     { character: ch.id, name: ch.name, weapon: ch.weapon, box: BODY_BOX, crouchBox: CROUCH_BOX, skin: hex(ch.recipe.skin), accent: hex(ch.recipe.accent), frameSize: 32 },
   );
-  savePNG(`${OUT}/${ch.id}.png`, sheet); saveJSON(`${OUT}/${ch.id}.json`, atlas); files += 2;
+  savePNG(`${OUT}/${ch.id}.png`, sheet, SCALE); saveJSON(`${OUT}/${ch.id}.json`, scaleAtlas(atlas)); files += 2;
+  const portrait = frames.find((f) => f.name === 'portrait');
+  if (portrait) { savePNG(`${OUT}/${ch.id}_portrait.png`, portrait.pix, SCALE); files++; }
 }
 
 // --- Waffen -------------------------------------------------------------------
@@ -38,23 +62,23 @@ for (const ch of CHARACTERS) {
     }
   }
   const { sheet, atlas } = pack(inputs, 'weapons.png', 256, 1);
-  savePNG(`${OUT}/weapons.png`, sheet); saveJSON(`${OUT}/weapons.json`, atlas); files += 2;
+  savePNG(`${OUT}/weapons.png`, sheet, SCALE); saveJSON(`${OUT}/weapons.json`, scaleAtlas(atlas)); files += 2;
 }
 
 // --- Tiles / FX ---------------------------------------------------------------
 {
   const { sheet, atlas } = pack(buildTiles(), 'tiles.png', 256, 1, { tile: 16 });
-  savePNG(`${OUT}/tiles.png`, sheet); saveJSON(`${OUT}/tiles.json`, atlas); files += 2;
+  savePNG(`${OUT}/tiles.png`, sheet, SCALE); saveJSON(`${OUT}/tiles.json`, scaleAtlas(atlas)); files += 2;
 }
 {
   const { sheet, atlas } = pack(buildFx(), 'fx.png', 512, 1);
-  savePNG(`${OUT}/fx.png`, sheet); saveJSON(`${OUT}/fx.json`, atlas); files += 2;
+  savePNG(`${OUT}/fx.png`, sheet, SCALE); saveJSON(`${OUT}/fx.json`, scaleAtlas(atlas)); files += 2;
 }
 
 // --- Hintergründe -------------------------------------------------------------
-savePNG(`${OUT}/bg_sky.png`, buildSky());
-savePNG(`${OUT}/bg_skyline.png`, buildSkyline());
-savePNG(`${OUT}/bg_mid.png`, buildMid());
+savePNG(`${OUT}/bg_sky.png`, buildSky(), SCALE);
+savePNG(`${OUT}/bg_skyline.png`, buildSkyline(), SCALE);
+savePNG(`${OUT}/bg_mid.png`, buildMid(), SCALE);
 files += 3;
 
 // --- Palette als JSON fürs Spiel ------------------------------------------------
@@ -62,7 +86,7 @@ saveJSON(`${OUT}/palette.json`, Object.fromEntries(COLOR_NAMES.map((n) => [n, he
 files++;
 
 // --- Kontaktbogen (docs/art/preview.png, 4x skaliert) -----------------------------
-{
+if (DOCS) {
   const cols = 12, cell = 34;
   const rows = CHARACTERS.length + 3;
   const sheet = new Pix(cols * cell + 8, rows * cell + 8, 'navy');
@@ -96,4 +120,4 @@ files++;
   files += 2;
 }
 
-console.log(`spritegen: ${files} Dateien in ${Date.now() - t0} ms geschrieben (${Object.keys(PALETTE).length} Farben).`);
+console.log(`spritegen: ${files} Dateien nach ${OUT} (x${SCALE}) in ${Date.now() - t0} ms geschrieben (${Object.keys(PALETTE).length} Farben).`);

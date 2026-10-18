@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "Games",
+	"Description": "Berlin Expendables - 4-Spieler-Lokal-Koop-Run'n'Gun (Broforce x Metal Slug) in HD-Pixel-Art mit 3D-VFX",
+	"Modules": [
+		{
+			"Name": "BerlinExpendables",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [ "Engine", "Paper2D", "Niagara" ]
+		}
+	],
+	"Plugins": [
+		{ "Name": "Paper2D", "Enabled": true },
+		{ "Name": "Niagara", "Enabled": true },
+		{ "Name": "PythonScriptPlugin", "Enabled": true },
+		{ "Name": "EditorScriptingUtilities", "Enabled": true },
+		{ "Name": "ModelContextProtocol", "Enabled": true },
+		{ "Name": "AllToolsets", "Enabled": true }
+	],
+	"TargetPlatforms": [ "Windows", "Linux", "Mac" ]
+}

@@ -164,6 +164,13 @@ Beitreten jederzeit per Sprung/Start auf einem freien Gerät (Drop-in). Bis zu 4
 - Freundbeschuss an/aus, Screen-Shake-Stärke, Bildschirm-Blitze reduzieren (Strobo!).
 - Komplett neu belegbare Tasten, Controller-Deadzone.
 
-## 14. Technik (Kurzfassung)
+## 14. Art Direction: opulente HD-Pixel-Art mit 3D-VFX
 
-TypeScript + Vite, eigener Canvas-2D-Renderer mit 480×270-Pixelbuffer und Integer-Skalierung, fester 60-Hz-Step, Gamepad-API. Assets kommen aus einem **eigenen prozeduralen Pixel-Art-Generator** (`tools/spritegen`) und optional aus **AutoSprite** über einen Import-Schritt, der echte Pixelraster erzwingt. Details, Meilensteine und Pipeline: `docs/ABLAUF.md`.
+- **Figuren und Welt** sind echte Pixel-Art auf einem 640×360-Raster (Metal-Slug-Detailgrad: Figuren 44–48 px hoch, Tiles 32 px). Charaktere kommen aus **AutoSprite**, durch den Pixelize-Schritt in Palette und Raster gezwungen; Platzhalter aus dem eigenen Spritegen.
+- **Hintergründe** sind gemalte, weite Parallax-Ebenen aus **ComfyUI** (Skyline mit Fernsehturm, Altbau-Zeilen, Spätis, Kräne), ebenfalls pixelisiert, damit alles aus einem Guss wirkt.
+- **3D-VFX** auf der 2D-Bühne: Niagara-Explosionen mit GPU-Funken, Rauch und Lichtblitz, physikalische Trümmerwürfel und Fahrzeugteile (Chaos), Punktlichter aus Mündungsfeuer, Bloom auf Neon. Sprites sind beleuchtet (Normalmaps), sodass eine Explosion den Hinterhof kurz in Orange taucht.
+- **Kamera** orthografisch, pixel-snapped; Effekte dürfen „über dem Raster" liegen (Lichter, Bloom, Partikel in voller Auflösung). Das ist der bewusste Kontrast: knackige Pixel-Figuren in einer Welt, die glüht.
+
+## 15. Technik (Kurzfassung)
+
+Unreal Engine 5.8, C++-Modul mit eigener Tile-Welt (zerstörbar, Instanced-Static-Mesh-Chunks) und eigener 2D-Physik, Paper2D für Sprites/Flipbooks/Sockets, Niagara für VFX, Canvas-HUD (später UMG), lokaler 4-Spieler-Input per Key-Polling. Assets über AutoSprite, ComfyUI und den eigenen Generator, alle durch `Tools/pixelize`. Details, Meilensteine, Pipeline: `docs/ABLAUF.md`; Einrichtung der MCP-Verbindungen: `docs/MCP_RUNBOOK.md`.
