@@ -1,5 +1,5 @@
 {
-  "_comment": "ComfyUI-Workflow (API-Format) für eine kachelbare Parallax-Ebene. Platzhalter in <> ersetzen; danach Tools/pixelize/pixelize.py --width 960 --dither --tile-check. Checkpoint: ein SDXL-Modell mit Pixel-Art-LoRA oder ein Pixel-Art-Finetune.",
+  "_comment": "ComfyUI-Workflow (API-Format) für eine kachelbare Parallax-Ebene. Platzhalter in <> ersetzen; danach Tools/pixelize/pixelize.py --width 1440 --dither --tile-check. Checkpoint: ein SDXL-Modell mit Pixel-Art-LoRA oder ein Pixel-Art-Finetune.",
   "3": {
     "class_type": "KSampler",
     "inputs": { "seed": 1337, "steps": 28, "cfg": 6.5, "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 1.0,

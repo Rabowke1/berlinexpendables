@@ -6,10 +6,10 @@ ComfyUI erzeugt die gemalten, weiten Hintergrundebenen; der Pixelize-Schritt bri
 
 | Ebene | Faktor | Größe (vor Pixelize → nach) | Inhalt |
 | --- | --- | --- | --- |
-| Sky | 0.0 | 1920×1080 → 960×540 | Himmel, Mond, Sterne, Wolkenschleier |
-| Far | 0.15 | 1920×560 → 960×280 | Skyline-Silhouette mit Wahrzeichen |
-| Mid | 0.4 | 1920×480 → 960×240 | Häuserzeile mit Fenstern, Neon, Kränen |
-| Near (optional) | 0.7 | 1920×320 → 960×160 | Zäune, Laternen, Büsche, Graffitiwand (mit Alpha) |
+| Sky | 0.0 | 1920×1080 → 1440×810 | Himmel, Mond, Sterne, Wolkenschleier |
+| Far | 0.15 | 1920×560 → 1440×420 | Skyline-Silhouette mit Wahrzeichen |
+| Mid | 0.4 | 1920×480 → 1440×360 | Häuserzeile mit Fenstern, Neon, Kränen |
+| Near (optional) | 0.7 | 1920×320 → 1440×240 | Zäune, Laternen, Büsche, Graffitiwand (mit Alpha) |
 
 Alle Ebenen außer Sky müssen **horizontal kachelbar** sein (`--tile-check` < 20).
 
@@ -48,7 +48,7 @@ Negativ:
 
 ## Nachbearbeitung
 ```bash
-python Tools/pixelize/pixelize.py far_raw.png Content/Import/ComfyUI/w1_far.png --width 960 --dither --tile-check
-python Tools/pixelize/pixelize.py mid_raw.png Content/Import/ComfyUI/w1_mid.png --width 960 --dither --tile-check
+python Tools/pixelize/pixelize.py far_raw.png Content/Import/ComfyUI/w1_far.png --width 1440 --dither --tile-check
+python Tools/pixelize/pixelize.py mid_raw.png Content/Import/ComfyUI/w1_mid.png --width 1440 --dither --tile-check
 ```
 Danach im Editor `be_import_sprites.py` (Hintergrund-Abschnitt) oder per MCP als Sprite importieren und einer `ABEParallaxLayer` zuweisen.

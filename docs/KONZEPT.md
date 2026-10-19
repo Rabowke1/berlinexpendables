@@ -68,7 +68,7 @@ Vier Freunde auf einer Couch, vier Controller, eine komplett zerlegbare Stadt.
 
 ## 6. Die Bros
 
-Alle Bros teilen ein Rig (32×32 Frame, 10×22 Kollisionsbox). Unterschiede: Palette, Kopfbedeckung, Props, **Signaturwaffe**, **Special** (Granaten-Slot, begrenzt, Nachschub über Kisten/Käfige) und **Nahkampf**.
+Alle Bros teilen ein Rig (Engine: 96×96 Frame, 30×66 Kollisionsbox; Web-Prototyp 32×32 / 10×22). Unterschiede: Palette, Kopfbedeckung, Props, **Signaturwaffe**, **Special** (Granaten-Slot, begrenzt, Nachschub über Kisten/Käfige) und **Nahkampf**.
 
 | Bro | Herkunft | Signaturwaffe (Primär) | Special (L / Y) | Nahkampf | Spielgefühl |
 | --- | --- | --- | --- | --- | --- |
@@ -166,7 +166,7 @@ Beitreten jederzeit per Sprung/Start auf einem freien Gerät (Drop-in). Bis zu 4
 
 ## 14. Art Direction: opulente HD-Pixel-Art mit 3D-VFX
 
-- **Figuren und Welt** sind echte Pixel-Art auf einem 640×360-Raster (Metal-Slug-Detailgrad: Figuren 44–48 px hoch, Tiles 32 px). Charaktere kommen aus **AutoSprite**, durch den Pixelize-Schritt in Palette und Raster gezwungen; Platzhalter aus dem eigenen Spritegen.
+- **Figuren und Welt** sind echte Pixel-Art auf einem 960×540-Raster (mehr Detail als Metal Slug: Figuren 66–72 px hoch, Tiles 48 px). Charaktere kommen aus **AutoSprite**, durch den Pixelize-Schritt in Palette und Raster gezwungen; Platzhalter aus dem eigenen Spritegen.
 - **Hintergründe** sind gemalte, weite Parallax-Ebenen aus **ComfyUI** (Skyline mit Fernsehturm, Altbau-Zeilen, Spätis, Kräne), ebenfalls pixelisiert, damit alles aus einem Guss wirkt.
 - **3D-VFX** auf der 2D-Bühne: Niagara-Explosionen mit GPU-Funken, Rauch und Lichtblitz, physikalische Trümmerwürfel und Fahrzeugteile (Chaos), Punktlichter aus Mündungsfeuer, Bloom auf Neon. Sprites sind beleuchtet (Normalmaps), sodass eine Explosion den Hinterhof kurz in Orange taucht.
 - **Kamera** orthografisch, pixel-snapped; Effekte dürfen „über dem Raster" liegen (Lichter, Bloom, Partikel in voller Auflösung). Das ist der bewusste Kontrast: knackige Pixel-Figuren in einer Welt, die glüht.

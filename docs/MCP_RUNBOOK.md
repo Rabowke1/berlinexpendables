@@ -30,16 +30,28 @@ Umgekehrt (Cloud-App steuert deinen PC): `claude remote-control` im Projektordne
 
 ## 3. AutoSprite- und ComfyUI-MCP eintragen
 
-Die genauen Server-URLs/Kommandos stehen in deinen Konten bzw. ComfyUI-Setups; so werden sie projektweit (committed in `.mcp.json`) registriert:
+### ComfyUI (eingerichtet am 19.10.)
+
+Als Brücke dient `comfy-mcp` (offizieller Comfy-Org-MCP-Server, PyPI) mit `comfy-cli` als Engine. Beide laufen isoliert als `uv`-Tools; ComfyUI selbst ist die Stability-Matrix-Installation unter `E:\temp\Data\Packages\ComfyUI`, die auf `127.0.0.1:8188` läuft.
+
+```powershell
+uv tool install "comfy-cli>=1.14.0"          # Befehl: comfy
+uv tool install comfy-mcp                     # Befehl: comfy-mcp
+comfy --skip-prompt tracking disable
+comfy --skip-prompt set-default "E:\temp\Data\Packages\ComfyUI"
+comfy --skip-prompt env                       # server.running muss true sein
+```
+
+Der Eintrag in `.mcp.json` (committed) startet `comfy-mcp.exe` per stdio; `COMFY_BIN` zeigt auf `comfy.exe`, `COMFYUI_URL` auf den laufenden Server. Pfade sind benutzerbezogen (`C:\Users\<Name>\.local\bin\...`), auf einem anderen Rechner anpassen. Prüfen: `claude mcp list` → `comfyui: … √ Connected`. Wichtige Tools: `server_info`, `search_models`, `nodes`, `validate_workflow`, `run_workflow`, `job`, `fetch_outputs`, `generate_image`, `search_templates`. ComfyUI muss vorher laufen (Stability Matrix → Launch); `launch_comfyui` über den MCP ist für diese Installation nicht nötig.
+
+Vorhandene Modelle (Stand 19.10.): `flux1-dev-fp8`, `flux_dev`, `dreamshaper_8` (SD 1.5), mehrere Pony/SDXL-Checkpoints; keine LoRAs. Für Pixel-Art-Hintergründe empfiehlt sich ein Pixel-Art-LoRA für SDXL/Flux oder Flux ohne LoRA plus `pixelize.py`.
+
+### AutoSprite
 
 ```bash
-# AutoSprite (Remote-MCP mit API-Key; URL laut AutoSprite-Dashboard)
+# Remote-MCP mit API-Key; URL laut AutoSprite-Dashboard
 claude mcp add --scope project --transport http autosprite https://<autosprite-mcp-url> \
   --header "Authorization: Bearer ${AUTOSPRITE_API_KEY}"
-
-# ComfyUI (lokaler MCP-Server, der an http://127.0.0.1:8188 spricht; Paketname laut deinem ComfyUI-MCP)
-claude mcp add --scope project --transport stdio --env COMFYUI_URL=http://127.0.0.1:8188 comfyui \
-  -- npx -y <comfyui-mcp-paket>
 ```
 
 `${AUTOSPRITE_API_KEY}` bleibt als Platzhalter in der Datei und wird aus deiner Umgebung expandiert, so landet kein Schlüssel im Repo. Nach Änderungen an `.mcp.json` die Session neu starten.
@@ -55,8 +67,8 @@ Jeder Punkt ist eine Anweisung an die lokale Claude-Session; die Toolsets werden
    - Tiles spiegelverkehrt? → `BP_TileWorld.FlipU/FlipV` umschalten.
    - Waffe sitzt daneben? → Hand-Socket/Pivot in `be_import_sprites.py` prüfen.
 5. **Niagara (3D-VFX)** mit dem Niagara-Toolset: `NS_Explosion` (Sprite-Sheet `T_fx`, GPU-Funken, Rauchring, Light-Renderer, User-Param `Tint`), `NS_Debris`, `NS_Blood`, `NS_Sparks`, `NS_Dust`, `NS_Smoke`; in `BPL_Combat` referenzieren. Fallbacks (`BP_Debris`, `BP_Flash`) bleiben aktiv.
-6. **AutoSprite:** ersten Bro bestellen (`docs/PROMPTS_AUTOSPRITE.md`), Export nach `Content/Import/AutoSprite/<id>/`, `pixelize.py --grid 64 --outline --normals`, `BE_IMPORT_DIR` auf den Ordner setzen, `be_import_sprites.py` erneut.
-7. **ComfyUI:** Welt-1-Ebenen mit `Tools/comfyui/workflows/parallax_layer.json`, `pixelize.py --width 960 --dither --tile-check`, als Sprites importieren, `BP_ParallaxLayer`-Aktoren zuweisen.
+6. **AutoSprite:** ersten Bro bestellen (`docs/PROMPTS_AUTOSPRITE.md`), Export nach `Content/Import/AutoSprite/<id>/`, `pixelize.py --grid 96 --outline --normals`, `BE_IMPORT_DIR` auf den Ordner setzen, `be_import_sprites.py` erneut.
+7. **ComfyUI:** Welt-1-Ebenen mit `Tools/comfyui/workflows/parallax_layer.json`, `pixelize.py --width 1440 --dither --tile-check`, als Sprites importieren, `BP_ParallaxLayer`-Aktoren zuweisen.
 8. **Commit:** `Content/**/*.uasset` und `*.umap` laufen über Git LFS. Vor großen MCP-Änderungen und danach speichern (Strg+Shift+S).
 
 ## 5. Sicherheitsregeln bei MCP-Änderungen

@@ -10,22 +10,22 @@ from be_common import *  # noqa: F401,F403
 FPS = {"idle": 5, "run": 12, "jump": 1, "fall": 1, "crouch": 1, "melee": 15, "panic": 12,
        "explosion": 20, "muzzle": 30, "smoke": 15, "wave": 15, "bottle": 15, "flame": 15}
 
-# Balancing (Prototyp-Werte: px/Frame x120 = uu/s bei 2x-Assets; Frames/60 = s)
+# Balancing (Prototyp-Werte: px/Frame x180 = uu/s bei 3x-Assets; Frames/60 = s)
 CHAR_TABLE = {
-    "willi":    dict(name="CURRYWURST WILLI", tagline="MIT ALLES UND SCHARF!", player=True, weapon="shotgun", grenade_radius=68.0,
-                     w=dict(cooldown=0.433, count=5, spread=0.26, recoil=168.0, shake=0.25), b=dict(sprite="pellet", speed=660.0, life=0.37)),
-    "doro":     dict(name="TECHNODORE", tagline="DU KOMMST HIER NICHT REIN.", player=True, weapon="bass", grenade_radius=60.0,
-                     w=dict(cooldown=0.3, count=1, spread=0.0, recoil=48.0, shake=0.12), b=dict(sprite="wave", speed=540.0, life=1.0, pierce=3, tile=2.0)),
-    "berti":    dict(name="BVG-BERTI", tagline="ZURUECKBLEIBEN BITTE!", player=True, weapon="smg", grenade_radius=60.0,
-                     w=dict(cooldown=0.083, count=1, spread=0.08, recoil=18.0, shake=0.05), b=dict(sprite="smgbullet", speed=960.0, life=0.83)),
-    "sven":     dict(name="SPAETI-SVEN", tagline="PFAND IST NICHT DRIN.", player=True, weapon="bottle", grenade_radius=60.0,
-                     w=dict(cooldown=0.4, count=1, spread=0.04, recoil=24.0, shake=0.08), b=dict(sprite="bottle", speed=576.0, life=2.33, gravity=1224.0, lob=312.0, explode=44.0, spin=True)),
-    "mook":     dict(name="ANZUG-SCHERGE", tagline="", player=False, weapon="pistol", hp=1, burst=1, gap=0.0, cd=(1.0, 1.83), sight=300.0, walk=60.0, score=100,
-                     w=dict(cooldown=1.0, count=1, spread=0.0, recoil=0.0, shake=0.0), b=dict(sprite="mookbullet", speed=384.0, life=1.83, tile=0.5)),
-    "security": dict(name="SECURITY", tagline="", player=False, weapon="rifle", hp=2, burst=3, gap=0.12, cd=(1.33, 2.17), sight=380.0, walk=48.0, score=150,
-                     w=dict(cooldown=1.0, count=1, spread=0.0, recoil=0.0, shake=0.0), b=dict(sprite="mookbullet", speed=480.0, life=1.83, tile=0.5)),
-    "captive":  dict(name="GEFANGENER", tagline="", player=False, weapon="pistol", hp=1, burst=0, gap=0.0, cd=(9.0, 9.0), sight=0.0, walk=60.0, score=0,
-                     w=dict(cooldown=1.0, count=0, spread=0.0, recoil=0.0, shake=0.0), b=dict(sprite="mookbullet", speed=1.0, life=0.1)),
+    "willi":    dict(name="CURRYWURST WILLI", tagline="MIT ALLES UND SCHARF!", player=True, weapon="shotgun", grenade_radius=102,
+                     w=dict(cooldown=0.433, count=5, spread=0.26, recoil=252, shake=0.25), b=dict(sprite="pellet", speed=990, life=0.37)),
+    "doro":     dict(name="TECHNODORE", tagline="DU KOMMST HIER NICHT REIN.", player=True, weapon="bass", grenade_radius=90,
+                     w=dict(cooldown=0.3, count=1, spread=0.0, recoil=72, shake=0.12), b=dict(sprite="wave", speed=810, life=1.0, pierce=3, tile=2.0)),
+    "berti":    dict(name="BVG-BERTI", tagline="ZURUECKBLEIBEN BITTE!", player=True, weapon="smg", grenade_radius=90,
+                     w=dict(cooldown=0.083, count=1, spread=0.08, recoil=27, shake=0.05), b=dict(sprite="smgbullet", speed=1440, life=0.83)),
+    "sven":     dict(name="SPAETI-SVEN", tagline="PFAND IST NICHT DRIN.", player=True, weapon="bottle", grenade_radius=90,
+                     w=dict(cooldown=0.4, count=1, spread=0.04, recoil=36, shake=0.08), b=dict(sprite="bottle", speed=864, life=2.33, gravity=1836, lob=468, explode=66, spin=True)),
+    "mook":     dict(name="ANZUG-SCHERGE", tagline="", player=False, weapon="pistol", hp=1, burst=1, gap=0.0, cd=(1.0, 1.83), sight=450, walk=90, score=100,
+                     w=dict(cooldown=1.0, count=1, spread=0.0, recoil=0, shake=0.0), b=dict(sprite="mookbullet", speed=576, life=1.83, tile=0.5)),
+    "security": dict(name="SECURITY", tagline="", player=False, weapon="rifle", hp=2, burst=3, gap=0.12, cd=(1.33, 2.17), sight=570, walk=72, score=150,
+                     w=dict(cooldown=1.0, count=1, spread=0.0, recoil=0, shake=0.0), b=dict(sprite="mookbullet", speed=720, life=1.83, tile=0.5)),
+    "captive":  dict(name="GEFANGENER", tagline="", player=False, weapon="pistol", hp=1, burst=0, gap=0.0, cd=(9.0, 9.0), sight=0, walk=90, score=0,
+                     w=dict(cooldown=1.0, count=0, spread=0.0, recoil=0, shake=0.0), b=dict(sprite="mookbullet", speed=1.5, life=0.1)),
 }
 
 
@@ -42,8 +42,8 @@ def import_characters(sprite_material, fx_flipbooks):
         tex = import_texture(f"{cid}.png", f"T_{cid}")
         portrait_tex = import_texture(f"{cid}_portrait.png", f"T_{cid}_portrait")
         meta = atlas["meta"]
-        fs = meta.get("frameSize", 64)
-        feet_y = fs - 2  # Füße auf y = 30 (1x) -> 60 (2x) + 1 Outline-Reihe
+        fs = meta.get("frameSize", 96)
+        feet_y = fs - 2  # Füße auf y = 30 (1x) -> 93 (3x) inkl. Outline-Reihe
         sprites = {}
         for fname, fdef in atlas["frames"].items():
             fr = fdef["frame"]

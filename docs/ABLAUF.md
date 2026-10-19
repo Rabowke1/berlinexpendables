@@ -24,7 +24,7 @@ BerlinExpendables.uproject          UE 5.8 Blueprint-Projekt; Plugins: Paper2D, 
 .mcp.json                           Claude-Code-Projektkonfiguration: unreal-mcp (http://127.0.0.1:8000/mcp)
 Config/                             Renderer-Flags für Pixel-Art, kein Splitscreen, Gamepad-Offset
 Content/Python/                     Editor-Automation: be_build_all.py importiert Sprites, baut Flipbooks, Materialien, DataAssets, Map
-Content/Import/Placeholder/         Spritegen-Platzhalter in 2x (64-px-Figuren, 32-px-Tiles) + Atlanten
+Content/Import/Placeholder/         Spritegen-Platzhalter in 3x (96-px-Figuren, 48-px-Tiles) + Atlanten
 Content/Import/AutoSprite/          Ziel für KI-Charaktere (nach pixelize)
 Content/Import/ComfyUI/             Ziel für Parallax-Ebenen (nach pixelize)
 Content/BE/, Content/Maps/          im Editor erzeugte Blueprints/.uasset/.umap (Git LFS)
@@ -54,7 +54,7 @@ docs/                               Konzept, Styleguide, Blueprint-Bauplan, Prom
 
 ## 3. Rendering-Konzept „opulentes 2D“
 
-- **Auflösung:** 640×360 Welteinheiten im Bild (OrthoWidth 640). 1 uu = 1 Texel. Bei 1080p ist jeder Spielpixel exakt 3×3 Bildschirmpixel, bei 4K 6×6; die Kamera snappt auf ganze Einheiten, Sprites bleiben knackig.
+- **Auflösung:** 960×540 Welteinheiten im Bild (OrthoWidth 960). 1 uu = 1 Texel. Bei 1080p ist jeder Spielpixel exakt 2×2 Bildschirmpixel, bei 1440p 3×3, bei 4K 4×4; die Kamera snappt auf ganze Einheiten, Sprites bleiben knackig.
 - **Sprites:** Paper2D, Nearest-Filter, keine Mips, lit-Material mit Vertexfarbe und optionaler Normalmap (`SpriteNormal`, erzeugt von `pixelize.py --normals`).
 - **Licht:** kühles Mondlicht + Skylight als Basis, warme Punktlichter aus Mündungsfeuer und Explosionen (`ABEFlash`), Neon aus Emissive. Bloom an, TAA/Motion Blur/Auto-Exposure aus.
 - **3D-VFX:** Niagara-Systeme für Explosion (Sprite-Sheet + GPU-Funken + Rauchring + Light-Renderer), Trümmer als Mesh-Partikel, Blut/Konfetti, Staub; physikalische Trümmerwürfel (`ABEDebris`) als sofort funktionierender Fallback. Später: Chaos-Fracture für Autos/Props, Volumetric Fog in der Club-Welt, Regen.
@@ -65,15 +65,15 @@ docs/                               Konzept, Styleguide, Blueprint-Bauplan, Prom
 | Quelle | Wofür | Weg ins Spiel |
 | --- | --- | --- |
 | **AutoSprite** (MCP auf deinem PC) | Bros, Gegner, Gefangene, Bosse – Charakterdetail mit Animationen | Export (PNG + Atlas) → `pixelize.py --grid 64 --outline --normals` → `Content/Import/AutoSprite/<id>/` → `be_import_sprites.py` (BE_IMPORT_DIR) |
-| **ComfyUI** (MCP auf deinem PC) | Parallax-Ebenen, Titelbild, Weltkarte, Stimmungsbilder | Workflow `Tools/comfyui/workflows/parallax_layer.json` → `pixelize.py --width 960 --dither --tile-check` → Sprite → `ABEParallaxLayer` |
+| **ComfyUI** (MCP auf deinem PC) | Parallax-Ebenen, Titelbild, Weltkarte, Stimmungsbilder | Workflow `Tools/comfyui/workflows/parallax_layer.json` → `pixelize.py --width 1440 --dither --tile-check` → Sprite → `ABEParallaxLayer` |
 | **Spritegen** (Node, hier) | Platzhalter in korrekter Größe, Tiles, Items, FX-Sheets, Waffen, Prototyp-Assets | `npm run assets` → `Content/Import/Placeholder` (2×) und `Prototype/Web/public/assets` (1×) |
 | **Niagara/Materialien** (Editor, MCP) | 3D-VFX, Tile- und Sprite-Materialien | `be_make_materials.py` + Niagara-Toolset per MCP |
 
-Verbindliche Maße: Figur-Frame 64×64 (Füße y = 61), Box 20×44 (geduckt 20×34), Tiles 32×32, Items 20×20, Projektile 6–18 px. Sockets: `Hand` am Körper, `Muzzle` an der Waffe, Pivot der Waffe = Griff. Details und Prompts: `PROMPTS_AUTOSPRITE.md`, `PROMPTS_COMFYUI.md`, `STYLEGUIDE.md`.
+Verbindliche Maße: Figur-Frame 96×96 (Füße y = 93), Box 30×66 (geduckt 30×51), Tiles 48×48, Items 30×30, Projektile 9–27 px. Sockets: `Hand` am Körper, `Muzzle` an der Waffe, Pivot der Waffe = Griff. Details und Prompts: `PROMPTS_AUTOSPRITE.md`, `PROMPTS_COMFYUI.md`, `STYLEGUIDE.md`.
 
 ## 5. Levelformat (ASCII)
 
-Levels sind Textzeilen in einem `UBELevelAsset` (aus `Prototype/Web/src/data/levels/*.ts` übernommen). Ein Zeichen = ein 32-px-Tile:
+Levels sind Textzeilen in einem `UBELevelAsset` (aus `Prototype/Web/src/data/levels/*.ts` übernommen). Ein Zeichen = ein 48-px-Tile:
 
 | Zeichen | Bedeutung | | Zeichen | Bedeutung |
 | --- | --- | --- | --- | --- |
@@ -117,7 +117,7 @@ Balancing-Werte stehen an genau zwei Stellen: `Content/Python/be_import_sprites.
 
 1. **Blut oder Konfetti als Default?** (`bGore` in den Settings, aktuell Blut)
 2. **Tastatur-Layout P2:** `, . /` + `M` oder Numpad?
-3. **AutoSprite-Stil:** 64-px-Figuren wie geplant, oder 96 px für mehr Detail (dann Tiles 48 px, Auflösung 960×540)?
+3. ~~AutoSprite-Stil: 64 oder 96 px?~~ **Entschieden (19.10.): 96-px-Figuren, 48-px-Tiles, 960×540** – mehr Detail, man sieht mehr von den Charakteren.
 4. **Normalmap-Licht auf Sprites** von Anfang an (opulenter, mehr Pipeline-Aufwand) oder erst ab M3?
 5. **HUD:** UMG-Widgets (Standard) oder Canvas-HUD-Blueprint (schneller zu bauen, weniger hübsch)?
 6. **Bro-Roster** und **Bösewicht-Namen** („Beton & Rendite AG", „Baron von Beton") – Änderungswünsche?
