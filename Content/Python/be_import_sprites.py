@@ -131,8 +131,14 @@ def import_fx_and_props(sprite_material):
             fr = fdef["frame"]
             sprites[fname] = make_sprite(f"S_prop_{fname}", tiles_tex, fr, (fr["w"] / 2.0, fr["h"] / 2.0), None, sprite_material)
 
+    # Parallax-Ebenen: fertige ComfyUI-Ebenen (Content/Import/ComfyUI/w1_*.png) haben Vorrang vor den Platzhaltern
+    comfy_dir = os.path.join(PROJECT_DIR, "Content", "Import", "ComfyUI")
+    comfy_names = {"bg_sky": "w1_sky.png", "bg_skyline": "w1_far.png", "bg_mid": "w1_mid.png"}
     for bg in ("bg_sky", "bg_skyline", "bg_mid"):
-        tex = import_texture(f"{bg}.png", f"T_{bg}")
+        comfy_png = os.path.join(comfy_dir, comfy_names[bg])
+        src = comfy_png if os.path.exists(comfy_png) else f"{bg}.png"
+        log(f"Hintergrund {bg}: {os.path.basename(src)}")
+        tex = import_texture(src, f"T_{bg}")
         w, h = tex.blueprint_get_size_x(), tex.blueprint_get_size_y()
         sprites[bg] = make_sprite(f"S_{bg}", tex, {"x": 0, "y": 0, "w": w, "h": h}, (w / 2.0, h / 2.0), None, sprite_material)
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "ComfyUI-Workflow (API-Format) für eine kachelbare Parallax-Ebene. Platzhalter in <> ersetzen; danach Tools/pixelize/pixelize.py --width 1440 --dither --tile-check. Checkpoint: ein SDXL-Modell mit Pixel-Art-LoRA oder ein Pixel-Art-Finetune.",
+  "_comment": "Generische SDXL-Vorlage (API-Format), Platzhalter in <> ersetzen. Getestet und empfohlen sind die Flux-Workflows daneben: w1_sky_flux_retro.json, w1_far_flux_retro.json, w1_mid_flux.json (Ablauf: run_comfy.ps1 -> seamfix.py -> pixelize.py --preset bg --dither, siehe docs/PROMPTS_COMFYUI.md).",
   "3": {
     "class_type": "KSampler",
     "inputs": { "seed": 1337, "steps": 28, "cfg": 6.5, "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 1.0,

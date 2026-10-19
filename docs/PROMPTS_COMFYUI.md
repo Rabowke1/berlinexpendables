@@ -46,6 +46,18 @@ Negativ:
 - **Mid:** construction site with cranes, concrete mixers, „Rendite"-billboards (abstract shapes, no real text).
 - Finale: inside the TV-tower sphere – panorama windows with the whole city below (Sky layer as rotating panorama).
 
+## Getesteter Ablauf (19.10., RTX 4090, ComfyUI 0.42)
+
+Ergebnisse für Welt 1 liegen unter `Content/Import/ComfyUI/` (`w1_sky.png` 1440×816, `w1_far.png` 1440×432, `w1_mid.png` 1440×360; Rohbilder in `raw/`). Das Importskript nimmt sie automatisch statt der Platzhalter.
+
+| Schritt | Werkzeug | Erkenntnis |
+| --- | --- | --- |
+| Rendern | `Tools/comfyui/run_comfy.ps1 -Workflow Tools/comfyui/workflows/w1_mid_flux.json -OutDir <ordner>` | **Flux dev fp8** (`flux1-dev-fp8.safetensors`, 20 Schritte, euler/simple, cfg 1, FluxGuidance 3.5, 1920 breit) liefert in 15–30 s die beste Komposition: Fernsehturm, Kirchturm, Kräne, Altbau-Fassaden mit Balkonen und Neon-Spätis. Negativ-Prompt wirkt bei Flux nicht (ConditioningZeroOut). |
+| Stil | LoRA `flux_retro_pixel.safetensors` (Trigger `Retro Pixel`, Stärke 0,85) | Für **Skyline und Himmel** besser: Sterne, Wolkenbänder, grobe Pixelsilhouetten. Für die **Häuserzeile** reicht Flux ohne LoRA, dort ist der Detailgrad wichtiger. `flux_ume_modern_pixelart.safetensors` (Trigger `umempart`) und `sdxl_pixel-art-xl.safetensors` liegen als Alternativen in `E:\temp\Data\Models\Lora`. |
+| Naht | `python Tools/comfyui/seamfix.py raw.png seam.png --band 320 [--lora flux_retro_pixel.safetensors]` | Rollt das Bild um die halbe Breite und malt den mittleren Streifen per Flux-Inpainting neu. Nahtdifferenz der Häuserzeile von 45 auf 12,7, Skyline von 11 auf 10,7; visuell unsichtbar. |
+| Pixelize | `pixelize.py raw.png out.png --width 1440 --preset bg --dither` | **Preset `bg` ist Pflicht** (ohne helles Blau, Grün, Erde, Haut), sonst kippt der Himmelsverlauf in Grün/Blau. Dither erzeugt den 16-Bit-Himmel. Für den Himmel ohne `red`, sonst wird der Mond rot (`--colors ink,night,navy,slate,concrete,ash,fog,gold,orange,steelDark,steel`). |
+| Text | – | Flux malt Pseudo-Schriftzüge auf Neonschilder; nach dem Pixelize sind sie unleserliche Blöcke. Für Nahebenen später per Inpainting durch Symbole ersetzen. |
+
 ## Nachbearbeitung
 ```bash
 python Tools/pixelize/pixelize.py far_raw.png Content/Import/ComfyUI/w1_far.png --width 1440 --dither --tile-check

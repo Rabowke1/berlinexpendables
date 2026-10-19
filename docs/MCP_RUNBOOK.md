@@ -44,7 +44,7 @@ comfy --skip-prompt env                       # server.running muss true sein
 
 Der Eintrag in `.mcp.json` (committed) startet `comfy-mcp.exe` per stdio; `COMFY_BIN` zeigt auf `comfy.exe`, `COMFYUI_URL` auf den laufenden Server. Pfade sind benutzerbezogen (`C:\Users\<Name>\.local\bin\...`), auf einem anderen Rechner anpassen. Prüfen: `claude mcp list` → `comfyui: … √ Connected`. Wichtige Tools: `server_info`, `search_models`, `nodes`, `validate_workflow`, `run_workflow`, `job`, `fetch_outputs`, `generate_image`, `search_templates`. ComfyUI muss vorher laufen (Stability Matrix → Launch); `launch_comfyui` über den MCP ist für diese Installation nicht nötig.
 
-Vorhandene Modelle (Stand 19.10.): `flux1-dev-fp8`, `flux_dev`, `dreamshaper_8` (SD 1.5), mehrere Pony/SDXL-Checkpoints; keine LoRAs. Für Pixel-Art-Hintergründe empfiehlt sich ein Pixel-Art-LoRA für SDXL/Flux oder Flux ohne LoRA plus `pixelize.py`.
+Vorhandene Modelle (Stand 19.10.): `flux1-dev-fp8` (Komplettcheckpoint), `flux_dev` + `t5xxl` + `clip_l` + `ae`, Qwen Image 2512, HiDream, `dreamshaper_8` (SD 1.5), mehrere Pony/SDXL-Checkpoints. Nachgeladene LoRAs in `E:\temp\Data\Models\Lora`: `flux_retro_pixel` (Trigger `Retro Pixel`), `flux_ume_modern_pixelart` (Trigger `umempart`), `sdxl_pixel-art-xl` (Trigger `pixel art`). Der getestete Hintergrund-Workflow steht in `docs/PROMPTS_COMFYUI.md`; Skripte unter `Tools/comfyui/` (`run_comfy.ps1`, `seamfix.py`, `workflows/`).
 
 ### AutoSprite
 

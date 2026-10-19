@@ -23,9 +23,28 @@ except ImportError:  # pragma: no cover
 BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 
 
-def load_palette(path):
+PRESETS = {
+    # Himmel/Skyline/Häuserzeilen: keine Erd-, Gras- und Hauttöne, sonst kippen Verläufe ins Grün/Braun
+    # Kein helles Blau: Nachthimmel soll in night/navy/slate/steelDark bleiben, Blau ist Spieler-1-Farbe
+    "bg": ["ink", "night", "navy", "slate", "concrete", "ash", "fog", "steelDark", "steel", "glass", "gold", "orange", "red", "neonPink", "neonCyan", "purple"],
+    # Figuren/Props: volle Palette
+    "figure": None,
+    # Erde/Gras/Ziegel-Tiles
+    "terrain": ["ink", "night", "navy", "slate", "concrete", "ash", "soilDark", "soil", "soilLight", "mossDark", "moss", "mossLight", "brickDark", "brick", "brickLight", "steelDark", "steel", "brown"],
+}
+
+
+def load_palette(path, names=None):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    cols = data.values() if isinstance(data, dict) else data
+    if isinstance(data, dict):
+        items = [(k, v) for k, v in data.items() if names is None or k in names]
+        if names:
+            missing = [n for n in names if n not in data]
+            if missing:
+                sys.exit(f"Unbekannte Palettenfarben: {', '.join(missing)}")
+        cols = [v for _, v in items]
+    else:
+        cols = data
     out = []
     for h in cols:
         h = h.lstrip("#")
@@ -142,6 +161,8 @@ def main():
     ap.add_argument("--width", type=int); ap.add_argument("--height", type=int)
     ap.add_argument("--grid", type=int, help="Sheet mit festem Frame-Raster: nicht skalieren, nur quantisieren")
     ap.add_argument("--palette", default="Prototype/Web/public/assets/palette.json")
+    ap.add_argument("--preset", choices=sorted(PRESETS), default="figure", help="Teilpalette: bg (Hintergründe), terrain (Tiles), figure (alles)")
+    ap.add_argument("--colors", help="eigene Teilpalette: Farbnamen mit Komma, überschreibt --preset")
     ap.add_argument("--dither", action="store_true"); ap.add_argument("--no-despeckle", action="store_true")
     ap.add_argument("--outline", action="store_true", help="1-px-ink-Outline hinzufügen (Figuren, Props)")
     ap.add_argument("--alpha-cut", type=int, default=128)
@@ -150,7 +171,8 @@ def main():
     ap.add_argument("--scale-out", type=int, default=1, help="Ausgabe zusätzlich ganzzahlig hochskalieren (Vorschau)")
     a = ap.parse_args()
 
-    palette = load_palette(a.palette)
+    names = [n.strip() for n in a.colors.split(",")] if a.colors else PRESETS[a.preset]
+    palette = load_palette(a.palette, names)
     img = Image.open(a.src).convert("RGBA")
     img = downscale(img, a.width, a.height, a.grid)
     img = quantize(img, palette, a.dither, a.alpha_cut)
@@ -166,7 +188,7 @@ def main():
     if a.scale_out > 1:
         img = img.resize((img.width * a.scale_out, img.height * a.scale_out), Image.NEAREST)
     img.save(a.dst)
-    used = len({px for px in img.convert('RGBA').getdata() if px[3]})
+    used = len({px for px in list(img.convert('RGBA').getdata()) if px[3]})
     print(f"{a.dst}: {img.width}x{img.height}, {used} Farben")
 
 
