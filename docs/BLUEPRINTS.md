@@ -13,6 +13,18 @@ Referenz für alle, die im Editor von Hand arbeiten. Jede Funktion hat ein 1:1-G
 - **Ordner:** `/Game/BE/Blueprints` (Klassen), `/Game/BE/Data` (DataAsset-Instanzen, von Python erzeugt), `/Game/BE/Sprites|Flipbooks|Textures|Materials` (Python), `/Game/BE/UI` (Widgets), `/Game/BE/FX` (Niagara), `/Game/Maps`.
 - **Namen:** Blueprints `BP_*`, Enums `E_*`, Structs `S_*`, Widgets `WBP_*`, Function Library `BPL_*`, Niagara `NS_*`.
 
+## 0a. So werden die Asset-Typen im Content Browser angelegt (Rechtsklick in `/Game/BE/Blueprints`)
+
+| Asset | Menüpfad | Hinweis |
+| --- | --- | --- |
+| Enum `E_*` | **Blueprints → Enumeration** | nicht über „Blueprint Class“ |
+| Struct `S_*` | **Blueprints → Structure** | Felder im Struct-Editor anlegen |
+| Function Library `BPL_Combat` | **Blueprints → Blueprint Function Library** | „Blueprint Class → BlueprintFunctionLibrary“ ist **nicht** erlaubt und meldet „Es kann kein Blueprint basierend auf der Klasse BlueprintFunctionLibrary erstellt werden“ |
+| Daten-BP `BP_CharacterData` u. a. | **Blueprint Class → All Classes aufklappen → „PrimaryDataAsset“ suchen** | danach Variablen anlegen; Instanzen erzeugt das Python-Skript (oder *Miscellaneous → Data Asset* von Hand) |
+| Actor/Pawn/GameMode/… | **Blueprint Class → Actor / Pawn / Game Mode Base / Game State Base / Player Controller / Game Instance** | |
+| Widgets `WBP_*` | **User Interface → Widget Blueprint** | |
+| Niagara `NS_*` | **FX → Niagara System** | |
+
 ## 1. Enums & Structs (zuerst anlegen)
 
 | Asset | Werte / Felder |
